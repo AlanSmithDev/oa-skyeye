@@ -1,0 +1,799 @@
+package com.skyeye.chat.service.impl;
+
+import cn.hutool.core.util.StrUtil;
+import cn.hutool.json.JSONUtil;
+import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
+import com.github.pagehelper.Page;
+import com.github.pagehelper.PageHelper;
+import com.google.common.base.Joiner;
+import com.skyeye.ai.core.doubao.DouBaoChatClient;
+import com.skyeye.ai.core.enums.AiPlatformEnum;
+import com.skyeye.ai.core.factory.AiFactory;
+import com.skyeye.ai.core.knowledge.AiKnowledgeClient;
+import com.skyeye.ai.core.qianfan.QianfanChatClient;
+import com.skyeye.ai.core.tongyi.TongYiChatClient;
+import com.skyeye.ai.core.xunfei.XunFeiChatClient;
+import com.skyeye.base.business.service.impl.SkyeyeBusinessServiceImpl;
+import com.skyeye.chat.dao.ChatDao;
+import com.skyeye.chat.entity.Chat;
+import com.skyeye.chat.service.ChatService;
+import com.skyeye.common.constans.CommonConstants;
+import com.skyeye.common.constans.CommonNumConstants;
+import com.skyeye.common.entity.search.CommonPageInfo;
+import com.skyeye.common.enumeration.TenantEnum;
+import com.skyeye.common.enumeration.WhetherEnum;
+import com.skyeye.common.object.InputObject;
+import com.skyeye.common.object.OutputObject;
+import com.skyeye.common.tenant.context.TenantContext;
+import com.skyeye.common.util.ToolUtil;
+import com.skyeye.common.util.mybatisplus.MybatisPlusUtil;
+import com.skyeye.eve.service.ITenantService;
+import com.skyeye.exception.CustomException;
+import com.skyeye.key.entity.AiApiKey;
+import com.skyeye.key.service.AiApiKeyService;
+import com.skyeye.knowledge.util.KnowledgeTenantFilterHelper;
+import com.skyeye.role.entity.Role;
+import com.skyeye.role.service.RoleService;
+import com.skyeye.websocket.AiMessageWebSocket;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.Executor;
+
+/**
+ * @ClassName: ChatServiceImpl
+ * @Description: 聊天记录接口实现层
+ * @author: skyeye云系列--lqy
+ * @date: 2024/10/5 17:24
+ * @Copyright: 2024 https://gitee.com/doc_wei01/skyeye Inc. All rights reserved.
+ * 注意：本内容仅限购买后使用.禁止私自外泄以及用于其他的商业目的
+ */
+@Service
+public class ChatServiceImpl extends SkyeyeBusinessServiceImpl<ChatDao, Chat> implements ChatService {
+
+    private static final String STREAM_TYPE_CONTENT = "content";
+    private static final String STREAM_TYPE_REASONING = "reasoning";
+    private static final String STREAM_TYPE_STATUS = "status";
+    @Autowired
+    private AiFactory aiFactory;
+
+    @Autowired
+    private AiApiKeyService aiApiKeyService;
+
+    @Autowired
+    private RoleService roleService;
+
+    @Autowired
+    private ChatService chatService;
+
+    @Autowired
+    private Executor messageStreamExecutor;
+
+    @Autowired
+    private AiMessageWebSocket aiMessageWebSocket;
+
+    @Autowired
+    private ITenantService iTenantService;
+
+    @Value("${skyeye.tenant.enable:false}")
+    private boolean tenantEnable;
+
+    private final Map<String, String> chatPromptCache = new ConcurrentHashMap<>();
+
+    @Override
+    @Transactional
+    public void sendChatMessage(InputObject inputObject, OutputObject outputObject) {
+        Map<String, Object> params = inputObject.getParams();
+        String content = params.get("content").toString();
+        String apiKeyId = params.get("apiKeyId").toString();
+        String userId = InputObject.getLogParamsStatic().get("id").toString();
+        checkTenantTokenAllowUse();
+        Chat chat = new Chat();
+        AiApiKey aiApiKey = aiApiKeyService.selectById(apiKeyId);
+        String platform = aiApiKey.getPlatform();
+        // 获取到具有的ai模型
+        AiPlatformEnum aiModel = AiPlatformEnum.getName(platform);
+        // 获取role实例
+        com.skyeye.role.entity.Role role = roleService.selectById(aiApiKey.getRoleId());
+        String systemPrompt = role == null ? null : role.getPrompt();
+        // 创建AI实例
+        chat.setMessage(content);
+        chat.setPlatform(platform);
+        chat.setApiKeyId(apiKeyId);
+        String id = createEntity(chat, userId);
+        rememberChatPrompt(id, content);
+        switch (aiModel) {
+            case YI_YAN:
+                QianFanResponse(content, systemPrompt, userId, id, aiApiKey);
+                break;
+            case XUN_FEI:
+                XunFeiResponse(content, systemPrompt, userId, id, aiApiKey);
+                break;
+            case TONG_YI:
+                TongYiResponse(content, systemPrompt, userId, id, aiApiKey);
+                break;
+            case DOU_BAO:
+                DouBaoResponse(content, systemPrompt, userId, id, aiApiKey);
+                break;
+            default:
+                throw new CustomException("不支持的AI平台");
+        }
+        aiApiKey.setRoleMation(role);
+        chat.setApiKeyMation(aiApiKey);
+
+        outputObject.setBean(chat);
+        outputObject.setreturnCode(CommonNumConstants.NUM_ZERO);
+        outputObject.settotal(CommonNumConstants.NUM_ONE);
+    }
+
+    @Override
+    public void syncChatCompletion(InputObject inputObject, OutputObject outputObject) {
+        Map<String, Object> params = inputObject.getParams();
+        String content = params.get("content").toString();
+        String roleId = params.get("roleId").toString();
+        String apiKeyId = params.get("apiKeyId").toString();
+        String bizType = params.get("bizType").toString();
+        boolean saveChat = isSaveChat(params.get("saveChat"));
+        String userMessage = params.get("userMessage").toString().trim();
+        Object imagesObj = params.get("images");
+        List<String> images = readImages(imagesObj == null ? "" : imagesObj.toString());
+        String userId = InputObject.getLogParamsStatic().get("id").toString();
+        checkTenantTokenAllowUse();
+        AiApiKey aiApiKey = StrUtil.isNotBlank(roleId)
+            ? aiApiKeyService.selectEnabledKeyByRoleId(roleId)
+            : aiApiKeyService.selectEnabledKey(apiKeyId);
+        Role role = aiApiKey.getRoleMation();
+        if (role == null && StrUtil.isNotBlank(aiApiKey.getRoleId())) {
+            role = roleService.selectById(aiApiKey.getRoleId());
+        }
+        String systemPrompt = null;
+        if ("chat".equals(bizType) && role != null) {
+            systemPrompt = StrUtil.blankToDefault(role.getPrompt(), Role.DEFAULT_PROMPT);
+        }
+        AiPlatformEnum aiModel = AiPlatformEnum.getName(aiApiKey.getPlatform());
+        String id;
+        if (saveChat) {
+            Chat chat = new Chat();
+            chat.setMessage(userMessage);
+            chat.setPlatform(aiApiKey.getPlatform());
+            chat.setApiKeyId(aiApiKey.getId());
+            id = createEntity(chat, userId);
+        } else {
+            id = ToolUtil.getSurFaceId();
+        }
+        if ("chat".equals(bizType) && role != null && StrUtil.isNotBlank(role.getKnowledgeId())) {
+            sendStreamChunk(userId, id, bizType, "正在检索知识库...", false, 0, STREAM_TYPE_STATUS);
+        }
+        String knowledgeQuery = params.get("knowledgeQuery") == null ? "" : params.get("knowledgeQuery").toString();
+        content = appendRoleKnowledge(bizType, role, content, knowledgeQuery);
+        rememberChatPrompt(id, content);
+        Map<String, Object> bean = new HashMap<>();
+        bean.put("id", id);
+        bean.put("chatId", id);
+        bean.put("apiKeyId", aiApiKey.getId());
+        bean.put("platform", aiApiKey.getPlatform());
+        switch (aiModel) {
+            case YI_YAN:
+                streamYiYan(content, systemPrompt, userId, id, aiApiKey, bizType, images, saveChat);
+                break;
+            case XUN_FEI:
+                streamXunFei(content, systemPrompt, userId, id, aiApiKey, bizType, images, saveChat);
+                break;
+            case TONG_YI:
+                streamTongYi(content, systemPrompt, userId, id, aiApiKey, bizType, images, saveChat);
+                break;
+            case DOU_BAO:
+                streamDouBao(content, systemPrompt, userId, id, aiApiKey, bizType, images, saveChat);
+                break;
+            default:
+                throw new CustomException("不支持的AI平台");
+        }
+        outputObject.setBean(bean);
+        outputObject.settotal(CommonNumConstants.NUM_ONE);
+    }
+
+    /**
+     * 闲聊时绑定角色知识库。检索词优先用用户原问题，不要拿整段提示词去搜。
+     * 开启租户时：检索后按正文中的租户标记过滤，并提示模型按当前租户作答。
+     */
+    private String appendRoleKnowledge(String bizType, com.skyeye.role.entity.Role role, String content,
+                                       String knowledgeQuery) {
+        if (!"chat".equals(bizType) || role == null || StrUtil.isBlank(role.getKnowledgeId()) || StrUtil.isBlank(content)) {
+            return content;
+        }
+        AiApiKey apiKey;
+        try {
+            apiKey = aiApiKeyService.selectEnabledKeyByRoleId(role.getId());
+        } catch (CustomException e) {
+            return content;
+        }
+        if (StrUtil.isBlank(apiKey.getPlatformKnowledgeId())) {
+            return content;
+        }
+        AiPlatformEnum platform = AiPlatformEnum.getName(apiKey.getPlatform());
+        AiKnowledgeClient client = aiFactory.getKnowledgeClient(platform);
+        if (client.useNativeAppKnowledge()) {
+            return content;
+        }
+        String currentTenantId = TenantContext.getTenantId();
+        String query = StrUtil.blankToDefault(knowledgeQuery, content);
+        if (tenantEnable && StrUtil.isNotBlank(currentTenantId)) {
+            // 提高与当前租户相关片段的召回
+            query = query + " 租户ID " + currentTenantId;
+        }
+        int topN = tenantEnable && StrUtil.isNotBlank(currentTenantId) ? 16 : 8;
+        String knowledgeText = client.search(apiKey.toAiKnowledgeConfig(), query, topN);
+        knowledgeText = KnowledgeTenantFilterHelper.filterKnowledgeText(knowledgeText, tenantEnable, currentTenantId);
+        if (StrUtil.isBlank(knowledgeText)) {
+            return content;
+        }
+        StringBuilder sb = new StringBuilder();
+        sb.append("以下是知识库检索到的相关资料，请据此回答；可归纳列表。资料不足时说明缺少什么，不要编造。\n");
+        if (tenantEnable && StrUtil.isNotBlank(currentTenantId)) {
+            sb.append("当前租户ID=").append(currentTenantId)
+                .append("。资料块含 [skyeye_tenant=…][skyeye_isolation=…] 标记，请严格按隔离类型使用：")
+                .append("strongIsolation 仅当前租户；weakIsolation 当前租户或平台；")
+                .append("noIsolation 不限；plate 仅平台账号可见。不要使用其他租户的私有数据。\n");
+        }
+        sb.append("【知识库】\n").append(knowledgeText).append("\n【用户问题】\n").append(content);
+        return sb.toString();
+    }
+
+    /**
+     * 是否写入 skyeye_ai_chat。
+     */
+    private boolean isSaveChat(Object value) {
+        if (value == null || StrUtil.isBlank(value.toString())) {
+            return true;
+        }
+        String text = value.toString().trim();
+        if (String.valueOf(WhetherEnum.DISABLE_USING.getKey()).equals(text)) {
+            return false;
+        }
+        return true;
+    }
+
+    private void sendStreamChunk(String userId, String chatId, String bizType, String chunk, boolean end, Object orderBy) {
+        sendStreamChunk(userId, chatId, bizType, chunk, end, orderBy, STREAM_TYPE_CONTENT);
+    }
+
+    private void sendStreamChunk(String userId, String chatId, String bizType, String chunk, boolean end,
+                                 Object orderBy, String streamType) {
+        Map<String, Object> messageMap = new HashMap<>();
+        messageMap.put("message", chunk);
+        messageMap.put("end", end);
+        messageMap.put("orderBy", orderBy);
+        messageMap.put("chatId", chatId);
+        messageMap.put("bizType", bizType);
+        messageMap.put("streamType", streamType);
+        aiMessageWebSocket.sendMessageTo(JSONUtil.toJsonStr(messageMap), userId);
+    }
+
+    /**
+     * 请求线程的租户在 ThreadLocal 里，丢进线程池后会丢。
+     * 提交前先拷贝，子线程和 OkHttp/WebSocket 回调里再绑回去，否则 MyBatis 租户拦截器会报「租户ID不能为空」。
+     * NoClassDefFoundError 等 Error 不是 Exception，必须 catch Throwable，否则前端收不到结束包会一直转圈。
+     */
+    private void runStreamTask(String userId, String chatId, String bizType, Runnable task) {
+        String tenantId = TenantContext.getTenantId();
+        TenantEnum isolationType = TenantContext.getIsolationType();
+        messageStreamExecutor.execute(() -> {
+            try {
+                bindTenantContext(tenantId, isolationType);
+                task.run();
+            } catch (Throwable t) {
+                persistYiYanPartial(userId, chatId);
+                sendYiYanError(userId, chatId, bizType, StrUtil.blankToDefault(t.getMessage(), t.getClass().getSimpleName()));
+            } finally {
+                TenantContext.clear();
+            }
+        });
+    }
+
+    private void bindTenantContext(String tenantId, TenantEnum isolationType) {
+        if (StrUtil.isNotBlank(tenantId)) {
+            TenantContext.setTenantId(tenantId);
+        }
+        if (isolationType != null) {
+            TenantContext.setIsolationType(isolationType);
+        }
+    }
+
+    private void streamTongYi(String content, String systemPrompt, String userId, String chatId, AiApiKey aiApiKey,
+                              String bizType, List<String> images, boolean saveChat) {
+        runStreamTask(userId, chatId, bizType, () -> {
+            consumeTongYiStream(aiApiKey, systemPrompt, resolveHistory(saveChat, userId, aiApiKey.getId()),
+                content, images, userId, chatId, bizType);
+        });
+    }
+
+    private void streamYiYan(String content, String systemPrompt, String userId, String chatId, AiApiKey aiApiKey,
+                             String bizType, List<String> images, boolean saveChat) {
+        runStreamTask(userId, chatId, bizType, () -> {
+            consumeYiYanStream(aiApiKey, buildChatMessages(systemPrompt, resolveHistory(saveChat, userId, aiApiKey.getId()), content),
+                images, userId, chatId, bizType);
+        });
+    }
+
+    private void streamXunFei(String content, String systemPrompt, String userId, String chatId, AiApiKey aiApiKey,
+                              String bizType, List<String> images, boolean saveChat) {
+        runStreamTask(userId, chatId, bizType, () -> {
+            consumeXunFeiStream(aiApiKey, buildChatMessages(systemPrompt, resolveHistory(saveChat, userId, aiApiKey.getId()), content),
+                0.3, images, userId, chatId, bizType);
+        });
+    }
+
+    private void streamDouBao(String content, String systemPrompt, String userId, String chatId, AiApiKey aiApiKey,
+                              String bizType, List<String> images, boolean saveChat) {
+        runStreamTask(userId, chatId, bizType, () -> {
+            consumeDouBaoStream(aiApiKey, buildChatMessages(systemPrompt, resolveHistory(saveChat, userId, aiApiKey.getId()), content),
+                images, userId, chatId, bizType);
+        });
+    }
+
+    /**
+     * 仅正式聊天拼近期历史；Bug/需求草稿不记库，也不带历史。
+     */
+    private List<Chat> resolveHistory(boolean saveChat, String userId, String apiKeyId) {
+        return saveChat ? getRecentlyChats(userId, apiKeyId) : null;
+    }
+
+    /**
+     * 普通聊天页的文心流式调用：会把近期 user/assistant 历史拼进 messages，再追加本轮用户输入。
+     * bizType 传 null，走旧聊天页的 WebSocket 协议（不含 chatId、bizType 字段）。
+     */
+    private void QianFanResponse(String message, String systemPrompt, String userId, String chatId, AiApiKey aiApiKey) {
+        runStreamTask(userId, chatId, null, () -> {
+            List<Chat> chatList = getRecentlyChats(userId, aiApiKey.getId());
+            consumeYiYanStream(aiApiKey, buildChatMessages(systemPrompt, chatList, message), null, userId, chatId, null);
+        });
+    }
+
+    private List<String> readImages(String raw) {
+        if (StrUtil.isEmpty(raw)) {
+            return new ArrayList<>();
+        }
+        return JSONUtil.toList(raw, null);
+    }
+
+    private List<Map<String, String>> buildChatMessages(String systemPrompt, List<Chat> history, String currentUserMessage) {
+        List<Map<String, String>> messages = new ArrayList<>();
+        if (StrUtil.isNotBlank(systemPrompt)) {
+            messages.add(chatMessage("system", systemPrompt));
+        }
+        if (history != null) {
+            // getRecentlyChats 按时间倒序，这里倒着拼成从旧到新
+            for (int i = history.size() - 1; i >= 0; i--) {
+                Chat chat = history.get(i);
+                if (StrUtil.isNotEmpty(chat.getMessage()) && StrUtil.isNotEmpty(chat.getContent())) {
+                    messages.add(chatMessage("user", chat.getMessage()));
+                    messages.add(chatMessage("assistant", chat.getContent()));
+                }
+            }
+        }
+        messages.add(chatMessage("user", currentUserMessage));
+        return messages;
+    }
+
+    private Map<String, String> chatMessage(String role, String content) {
+        Map<String, String> item = new HashMap<>();
+        item.put("role", role);
+        item.put("content", content);
+        return item;
+    }
+
+    /**
+     * 通义百炼应用用的多轮历史：user / assistant，时间从旧到新。
+     */
+    private List<Map<String, String>> buildTongYiHistory(List<Chat> history) {
+        List<Map<String, String>> items = new ArrayList<>();
+        if (history == null || history.isEmpty()) {
+            return items;
+        }
+        for (int i = history.size() - 1; i >= 0; i--) {
+            Chat chat = history.get(i);
+            if (StrUtil.isNotEmpty(chat.getMessage()) && StrUtil.isNotEmpty(chat.getContent())) {
+                Map<String, String> item = new HashMap<>();
+                item.put("user", chat.getMessage());
+                item.put("assistant", chat.getContent());
+                items.add(item);
+            }
+        }
+        return items;
+    }
+
+    /**
+     * 消费千帆流式响应：边收边通过 WebSocket 推给前端。
+     * 鉴权只使用 API Key（IAM 密钥），不再使用应用 Secret Key。
+     *
+     * @param bizType 业务类型；null 表示普通聊天页，非空表示需求草稿等业务流式
+     */
+    private void consumeYiYanStream(AiApiKey aiApiKey, List<Map<String, String>> messages, List<String> images,
+                                    String userId, String chatId, String bizType) {
+        QianfanChatClient client = (QianfanChatClient) aiFactory.getDefaultChatModel(AiPlatformEnum.YI_YAN, aiApiKey);
+        consumeClientStream(userId, chatId, bizType, (tenantId, isolationType, finished) ->
+            client.streamChat(messages, aiApiKey.getApiAppId(), images, new QianfanChatClient.StreamListener() {
+                @Override
+                public void onDelta(String piece, boolean end) {
+                    handleStreamDelta(tenantId, isolationType, userId, chatId, bizType, piece, end, finished);
+                }
+
+                @Override
+                public void onReasoningDelta(String piece, boolean end) {
+                    handleStreamReasoningDelta(userId, chatId, bizType, piece);
+                }
+
+                @Override
+                public void onError(String message) {
+                    handleStreamError(tenantId, isolationType, userId, chatId, bizType, message, finished);
+                }
+            }));
+    }
+
+    private void consumeXunFeiStream(AiApiKey aiApiKey, List<Map<String, String>> messages, double temperature,
+                                     String userId, String chatId, String bizType) {
+        consumeXunFeiStream(aiApiKey, messages, temperature, null, userId, chatId, bizType);
+    }
+
+    private void consumeXunFeiStream(AiApiKey aiApiKey, List<Map<String, String>> messages, double temperature,
+                                     List<String> images, String userId, String chatId, String bizType) {
+        XunFeiChatClient client = (XunFeiChatClient) aiFactory.getDefaultChatModel(AiPlatformEnum.XUN_FEI, aiApiKey);
+        consumeClientStream(userId, chatId, bizType, (tenantId, isolationType, finished) ->
+            client.streamChat(messages, temperature, images, new XunFeiChatClient.StreamListener() {
+                @Override
+                public void onDelta(String piece, boolean end) {
+                    handleStreamDelta(tenantId, isolationType, userId, chatId, bizType, piece, end, finished);
+                }
+
+                @Override
+                public void onReasoningDelta(String piece, boolean end) {
+                    handleStreamReasoningDelta(userId, chatId, bizType, piece);
+                }
+
+                @Override
+                public void onError(String message) {
+                    handleStreamError(tenantId, isolationType, userId, chatId, bizType, message, finished);
+                }
+            }));
+    }
+
+    private void consumeTongYiStream(AiApiKey aiApiKey, String systemPrompt, List<Chat> history,
+                                     String currentUserMessage, List<String> images,
+                                     String userId, String chatId, String bizType) {
+        TongYiChatClient client = (TongYiChatClient) aiFactory.getDefaultChatModel(AiPlatformEnum.TONG_YI, aiApiKey);
+        consumeClientStream(userId, chatId, bizType, (tenantId, isolationType, finished) ->
+            client.streamChat(systemPrompt, buildTongYiHistory(history), currentUserMessage, images, new TongYiChatClient.StreamListener() {
+                @Override
+                public void onDelta(String piece, boolean end) {
+                    handleStreamDelta(tenantId, isolationType, userId, chatId, bizType, piece, end, finished);
+                }
+
+                @Override
+                public void onReasoningDelta(String piece, boolean end) {
+                    handleStreamReasoningDelta(userId, chatId, bizType, piece);
+                }
+
+                @Override
+                public void onError(String message) {
+                    handleStreamError(tenantId, isolationType, userId, chatId, bizType, message, finished);
+                }
+            }));
+    }
+
+    private void consumeDouBaoStream(AiApiKey aiApiKey, List<Map<String, String>> messages, List<String> images,
+                                     String userId, String chatId, String bizType) {
+        DouBaoChatClient client = (DouBaoChatClient) aiFactory.getDefaultChatModel(AiPlatformEnum.DOU_BAO, aiApiKey);
+        consumeClientStream(userId, chatId, bizType, (tenantId, isolationType, finished) ->
+            client.streamChat(messages, images, new DouBaoChatClient.StreamListener() {
+                @Override
+                public void onDelta(String piece, boolean end) {
+                    handleStreamDelta(tenantId, isolationType, userId, chatId, bizType, piece, end, finished);
+                }
+
+                @Override
+                public void onReasoningDelta(String piece, boolean end) {
+                    handleStreamReasoningDelta(userId, chatId, bizType, piece);
+                }
+
+                @Override
+                public void onError(String message) {
+                    handleStreamError(tenantId, isolationType, userId, chatId, bizType, message, finished);
+                }
+            }));
+    }
+
+    @FunctionalInterface
+    private interface StreamInvoker {
+        void invoke(String tenantId, TenantEnum isolationType, boolean[] finished);
+    }
+
+    /**
+     * 各平台客户端都是阻塞式 streamChat，回调可能在 SDK 线程，落库前要重新绑租户。
+     */
+    private void consumeClientStream(String userId, String chatId, String bizType, StreamInvoker invoker) {
+        final String tenantId = TenantContext.getTenantId();
+        final TenantEnum isolationType = TenantContext.getIsolationType();
+        final boolean[] finished = {false};
+        try {
+            invoker.invoke(tenantId, isolationType, finished);
+            if (!finished[0]) {
+                try {
+                    bindTenantContext(tenantId, isolationType);
+                    appendYiYanChunk(userId, chatId, bizType, StrUtil.EMPTY, true);
+                } finally {
+                    TenantContext.clear();
+                }
+            }
+        } catch (Throwable e) {
+            try {
+                bindTenantContext(tenantId, isolationType);
+                persistYiYanPartial(userId, chatId);
+                sendYiYanError(userId, chatId, bizType, StrUtil.blankToDefault(e.getMessage(), e.getClass().getSimpleName()));
+            } finally {
+                TenantContext.clear();
+            }
+        }
+    }
+
+    private void handleStreamDelta(String tenantId, TenantEnum isolationType, String userId, String chatId,
+                                   String bizType, String piece, boolean end, boolean[] finished) {
+        // 不能用 isBlank：单独一包的 "\n" 也是有效内容
+        if (StrUtil.isEmpty(piece) && !end) {
+            return;
+        }
+        try {
+            bindTenantContext(tenantId, isolationType);
+            finished[0] = appendYiYanChunk(userId, chatId, bizType, piece, end) || finished[0];
+        } finally {
+            TenantContext.clear();
+        }
+    }
+
+    private void handleStreamReasoningDelta(String userId, String chatId, String bizType, String piece) {
+        if (StrUtil.isEmpty(piece) || StrUtil.isBlank(userId)) {
+            return;
+        }
+        if (bizType == null) {
+            Map<String, Object> messageMap = new HashMap<>();
+            messageMap.put("message", piece);
+            messageMap.put("end", false);
+            messageMap.put("orderBy", -2);
+            messageMap.put("chatId", chatId);
+            messageMap.put("streamType", STREAM_TYPE_REASONING);
+            aiMessageWebSocket.sendMessageTo(JSONUtil.toJsonStr(messageMap), userId);
+        } else {
+            sendStreamChunk(userId, chatId, bizType, piece, false, -2, STREAM_TYPE_REASONING);
+        }
+    }
+
+    private void handleStreamError(String tenantId, TenantEnum isolationType, String userId, String chatId,
+                                   String bizType, String message, boolean[] finished) {
+        try {
+            bindTenantContext(tenantId, isolationType);
+            persistYiYanPartial(userId, chatId);
+            sendYiYanError(userId, chatId, bizType, message);
+            finished[0] = true;
+        } finally {
+            TenantContext.clear();
+        }
+    }
+
+    private void sendYiYanError(String userId, String chatId, String bizType, String message) {
+        if (StrUtil.isBlank(userId)) {
+            return;
+        }
+        if (bizType == null) {
+            Map<String, Object> messageMap = new HashMap<>();
+            messageMap.put("message", message);
+            messageMap.put("end", true);
+            messageMap.put("orderBy", -1);
+            aiMessageWebSocket.sendMessageTo(JSONUtil.toJsonStr(messageMap), userId);
+        } else {
+            sendStreamChunk(userId, chatId, bizType, message, true, -1);
+        }
+    }
+
+    /**
+     * 把当前增量写入 Redis 缓存，结束时拼成完整回复落库，并推 WebSocket。
+     * Redis key 为 chat:{chatId}，存已收到的文本片段列表。
+     *
+     * @return 本包是否已标记结束
+     */
+    private boolean appendYiYanChunk(String userId, String chatId, String bizType, String piece, boolean end) {
+        String key = String.format(Locale.ROOT, "chat:%s", chatId);
+        List<String> chunkMessage = new ArrayList<>();
+        if (jedisClientService.exists(key)) {
+            chunkMessage = JSONUtil.toList(jedisClientService.get(key), null);
+        }
+        if (StrUtil.isNotEmpty(piece)) {
+            chunkMessage.add(piece);
+        }
+        if (end) {
+            jedisClientService.del(key);
+            Chat chat = findSavedChat(chatId);
+            String completion = Joiner.on("").join(chunkMessage);
+            if (chat != null) {
+                chat.setContent(completion);
+                chatService.updateEntity(chat, userId);
+            }
+            recordChatTokenUsage(chatId, completion);
+        } else {
+            jedisClientService.set(key, JSONUtil.toJsonStr(chunkMessage));
+        }
+        int orderBy = chunkMessage.isEmpty() ? 0 : chunkMessage.size() - 1;
+        if (bizType == null) {
+            Map<String, Object> messageMap = new HashMap<>();
+            messageMap.put("message", piece);
+            messageMap.put("end", end);
+            messageMap.put("orderBy", orderBy);
+            messageMap.put("streamType", STREAM_TYPE_CONTENT);
+            aiMessageWebSocket.sendMessageTo(JSONUtil.toJsonStr(messageMap), userId);
+        } else {
+            sendStreamChunk(userId, chatId, bizType, piece, end, orderBy);
+        }
+        return end;
+    }
+
+    /**
+     * 流式中途异常时，把 Redis 里已经收到的半段回复落库，避免 chat 记录一直空着。
+     */
+    private void persistYiYanPartial(String userId, String chatId) {
+        if (StrUtil.isBlank(chatId)) {
+            return;
+        }
+        String key = String.format(Locale.ROOT, "chat:%s", chatId);
+        if (!jedisClientService.exists(key)) {
+            return;
+        }
+        List<String> chunkMessage = JSONUtil.toList(jedisClientService.get(key), null);
+        jedisClientService.del(key);
+        String completion = Joiner.on("").join(chunkMessage);
+        Chat chat = findSavedChat(chatId);
+        if (chat != null) {
+            chat.setContent(completion);
+            chatService.updateEntity(chat, userId);
+        }
+        recordChatTokenUsage(chatId, completion);
+    }
+
+    /**
+     * saveChat=false 时 chatId 只是临时 id，库里没有记录，selectById 会返回空对象。
+     */
+    private Chat findSavedChat(String chatId) {
+        if (StrUtil.isBlank(chatId)) {
+            return null;
+        }
+        Chat chat = chatService.getById(chatId);
+        if (chat == null || StrUtil.isBlank(chat.getId())) {
+            return null;
+        }
+        return chat;
+    }
+
+    private void XunFeiResponse(String message, String systemPrompt, String userId, String chatId, AiApiKey aiApiKey) {
+        runStreamTask(userId, chatId, null, () -> {
+            List<Chat> chatList = getRecentlyChats(userId, aiApiKey.getId());
+            consumeXunFeiStream(aiApiKey, buildChatMessages(systemPrompt, chatList, message), 0.5, userId, chatId, null);
+        });
+    }
+
+    private List<Chat> getRecentlyChats(String userId, String apiKeyId) {
+        QueryWrapper<Chat> queryWrapper = new QueryWrapper<>();
+        queryWrapper.eq(MybatisPlusUtil.toColumns(Chat::getApiKeyId), apiKeyId);
+        queryWrapper.eq(MybatisPlusUtil.toColumns(Chat::getCreateId), userId);
+        queryWrapper.orderByDesc(MybatisPlusUtil.toColumns(Chat::getCreateTime));
+        PageHelper.startPage(1, 10);
+        return chatService.list(queryWrapper);
+    }
+
+    private void TongYiResponse(String message, String systemPrompt, String userId, String chatId, AiApiKey aiApiKey) {
+        runStreamTask(userId, chatId, null, () -> {
+            List<Chat> chatList = getRecentlyChats(userId, aiApiKey.getId());
+            consumeTongYiStream(aiApiKey, systemPrompt, chatList, message, null, userId, chatId, null);
+        });
+    }
+
+    private void DouBaoResponse(String message, String systemPrompt, String userId, String chatId, AiApiKey aiApiKey) {
+        runStreamTask(userId, chatId, null, () -> {
+            List<Chat> chatList = getRecentlyChats(userId, aiApiKey.getId());
+            consumeDouBaoStream(aiApiKey, buildChatMessages(systemPrompt, chatList, message), null, userId, chatId, null);
+        });
+    }
+
+
+    @Override
+    public void queryPageMessageList(InputObject inputObject, OutputObject outputObject) {
+        CommonPageInfo commonPageInfo = inputObject.getParams(CommonPageInfo.class);
+        String apiKeyId = commonPageInfo.getHolderId();
+        if (StrUtil.isEmpty(apiKeyId)) {
+            throw new CustomException("apiKeyId不能为空");
+        }
+
+        AiApiKey aiApiKey = aiApiKeyService.selectById(apiKeyId);
+        com.skyeye.role.entity.Role role = roleService.selectById(aiApiKey.getRoleId());
+        aiApiKey.setRoleMation(role);
+
+        String userId = InputObject.getLogParamsStatic().get("id").toString();
+        Page page = PageHelper.startPage(commonPageInfo.getPage(), commonPageInfo.getLimit());
+        QueryWrapper<Chat> queryWrapper = new QueryWrapper<>();
+        queryWrapper.eq(MybatisPlusUtil.toColumns(Chat::getCreateId), userId);
+        queryWrapper.eq(MybatisPlusUtil.toColumns(Chat::getApiKeyId), apiKeyId);
+        queryWrapper.orderByDesc(MybatisPlusUtil.toColumns(Chat::getCreateTime));
+        if (tenantEnable) {
+            String tenantId = TenantContext.getTenantId();
+            queryWrapper.eq(CommonConstants.TENANT_ID_FIELD, tenantId);
+        }
+        List<Chat> chatList = list(queryWrapper);
+
+        for (Chat chat : chatList) {
+            chat.setApiKeyMation(aiApiKey);
+        }
+        outputObject.setBeans(chatList);
+        outputObject.settotal(page.getTotal());
+    }
+
+    @Override
+    public void deleteAllByApiKeyId(InputObject inputObject, OutputObject outputObject) {
+        Map<String, Object> params = inputObject.getParams();
+        String apiKeyId = params.get("apiKeyId").toString();
+        String userId = InputObject.getLogParamsStatic().get("id").toString();
+        QueryWrapper<Chat> queryWrapper = new QueryWrapper<>();
+        queryWrapper.eq(MybatisPlusUtil.toColumns(Chat::getApiKeyId), apiKeyId);
+        queryWrapper.eq(MybatisPlusUtil.toColumns(Chat::getCreateId), userId);
+        remove(queryWrapper);
+    }
+
+    private void checkTenantTokenAllowUse() {
+        if (!tenantEnable) {
+            return;
+        }
+        String tenantId = TenantContext.getTenantId();
+        if (StrUtil.isBlank(tenantId)) {
+            return;
+        }
+        iTenantService.checkTenantTokenAllowUse(tenantId);
+    }
+
+    private void rememberChatPrompt(String chatId, String prompt) {
+        if (StrUtil.isBlank(chatId)) {
+            return;
+        }
+        chatPromptCache.put(chatId, StrUtil.nullToEmpty(prompt));
+    }
+
+    private void recordChatTokenUsage(String chatId, String completion) {
+        if (!tenantEnable || StrUtil.isBlank(chatId)) {
+            return;
+        }
+        String prompt = chatPromptCache.remove(chatId);
+        if (prompt == null) {
+            return;
+        }
+        String tenantId = TenantContext.getTenantId();
+        if (StrUtil.isBlank(tenantId)) {
+            return;
+        }
+        try {
+            long promptTokens = estimateTokens(prompt);
+            long completionTokens = estimateTokens(completion);
+            if (promptTokens + completionTokens <= 0) {
+                return;
+            }
+            iTenantService.recordTenantTokenUsage(tenantId, promptTokens, completionTokens, promptTokens + completionTokens);
+        } catch (Exception ignored) {
+            // 计费失败不影响对话
+        }
+    }
+
+    private long estimateTokens(String text) {
+        if (StrUtil.isBlank(text)) {
+            return 0L;
+        }
+        return Math.max(1L, (text.length() + 1L) / 2L);
+    }
+
+}
