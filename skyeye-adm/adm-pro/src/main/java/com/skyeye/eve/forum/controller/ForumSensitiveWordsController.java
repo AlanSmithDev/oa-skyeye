@@ -1,0 +1,65 @@
+/*******************************************************************************
+ * Copyright 卫志强 QQ：598748873@qq.com Inc. All rights reserved. 开源地址：https://gitee.com/doc_wei01/skyeye
+ ******************************************************************************/
+
+package com.skyeye.eve.forum.controller;
+
+import com.skyeye.annotation.api.Api;
+import com.skyeye.annotation.api.ApiImplicitParam;
+import com.skyeye.annotation.api.ApiImplicitParams;
+import com.skyeye.annotation.api.ApiOperation;
+import com.skyeye.common.entity.search.CommonPageInfo;
+import com.skyeye.common.object.InputObject;
+import com.skyeye.common.object.OutputObject;
+import com.skyeye.eve.forum.entity.ForumSensitiveWords;
+import com.skyeye.eve.forum.service.ForumSensitiveWordsService;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+
+/**
+ * @ClassName: ForumSensitiveWordsController
+ * @Description: 论坛敏感词管理
+ * @author: skyeye云系列--卫志强
+ * @date: 2024/3/9 14:31
+ * @Copyright: 2024 https://gitee.com/doc_wei01/skyeye Inc. All rights reserved.
+ * 注意：本内容仅限购买后使用.禁止私自外泄以及用于其他的商业目的
+ */
+@RestController
+@Api(value = "论坛敏感词管理", tags = "论坛敏感词管理", modelName = "论坛敏感词管理")
+public class ForumSensitiveWordsController {
+
+    @Autowired
+    private ForumSensitiveWordsService forumSensitiveWordsService;
+
+    @ApiOperation(id = "queryForumSensitiveWordsList", value = "获取论坛敏感词列表", method = "POST", allUse = "2")
+    @ApiImplicitParams(classBean = CommonPageInfo.class)
+    @RequestMapping("/post/ForumSensitiveWordsController/queryForumSensitiveWordsList")
+    public void queryForumSensitiveWordsList(InputObject inputObject, OutputObject outputObject) {
+        forumSensitiveWordsService.queryPageList(inputObject, outputObject);
+    }
+
+
+    @ApiOperation(id = "insertForumSensitiveWordsMation", value = "添加/编辑论坛敏感词", method = "POST", allUse = "2")
+    @ApiImplicitParams(classBean = ForumSensitiveWords.class)
+    @RequestMapping("/post/ForumSensitiveWordsController/insertForumSensitiveWordsMation")
+    public void insertForumSensitiveWordsMation(InputObject inputObject, OutputObject outputObject) {
+        forumSensitiveWordsService.saveOrUpdateEntity(inputObject, outputObject);
+    }
+
+    @ApiOperation(id = "deleteForumSensitiveWordsById", value = "根据id删除论坛敏感词", method = "DELETE", allUse = "2")
+    @ApiImplicitParams(value = {
+        @ApiImplicitParam(id = "id", name = "id", value = "主键id", required = "required")})
+    @RequestMapping("/post/ForumSensitiveWordsController/deleteForumSensitiveWordsById")
+    public void deleteForumSensitiveWordsById(InputObject inputObject, OutputObject outputObject) {
+        forumSensitiveWordsService.deleteById(inputObject, outputObject);
+    }
+
+    @ApiOperation(id = "selectForumSensitiveWordsById", value = "通过id查找对应的论坛敏感词信息", method = "POST", allUse = "2")
+    @ApiImplicitParams(value = {
+        @ApiImplicitParam(id = "id", name = "id", value = "主键id", required = "required")})
+    @RequestMapping("/post/ForumSensitiveWordsController/selectForumSensitiveWordsById")
+    public void selectForumSensitiveWordsById(InputObject inputObject, OutputObject outputObject) {
+        forumSensitiveWordsService.selectById(inputObject, outputObject);
+    }
+}
