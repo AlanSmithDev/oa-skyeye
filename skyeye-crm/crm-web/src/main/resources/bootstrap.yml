@@ -1,0 +1,90 @@
+server:
+  port: 8102
+
+spring:
+  application:
+    name: skyeye-crm-${spring.profiles.active} # 服务名
+  main:
+    allow-circular-references: true # 允许循环依赖，因为项目是三层架构，无法避免这个情况。
+    allow-bean-definition-overriding: true # 允许 Bean 覆盖，例如说 Feign 等会存在重复定义的服务
+  data:
+    redis:
+      repositories:
+        enabled: false # 项目未使用到 Spring Data Redis 的 Repository，所以直接禁用，保证启动速度
+  profiles:
+    active: dev
+  cloud:
+    nacos:
+      discovery:
+        server-addr: 172.18.92.40:8848 # 配置服务注册nacos地址
+        namespace: ${spring.profiles.active} # 配置命名空间
+        service: ${spring.application.name} # 配置服务名
+      config:
+        # 指定nacos server的地址
+        server-addr: 172.18.92.40:8848
+        # 配置文件后缀
+        file-extension: yml
+        # 命名空间 常用场景之一是不同环境的配置的区分隔离，例如开发测试环境和生产环境的资源（如配置、服务）隔离等
+        namespace: ${spring.profiles.active} # 配置命名空间
+        # 支持多个共享 Data Id 的配置，优先级小于ext-config,自定义 Data Id 配置 属性是个集合，内部由 Config POJO 组成。Config 有 3 个属性，分别是 dataId, group 以及 refresh
+        ext-config:
+          - data-id: skyeye-common.yml # 配置文件名-Data Id
+            group: DEFAULT_GROUP # 默认为DEFAULT_GROUP
+            refresh: false # 是否动态刷新，默认为false
+logging:
+  level:
+    com.skyeye: debug
+    # 关掉下面日志这个 Feign 的 HTTP 明细, IOperationLogCenterRest 的 INFO 会压过 com.skyeye 的 debug
+    com.skyeye.eve.operationlog.rest.IOperationLogCenterRest: INFO
+    com.skyeye.eve.rest.user.IAuthUserServiceRest: INFO
+    com.skyeye.eve.rest.lifecycle.ILifecycleTemplateRest: INFO
+    com.skyeye.common.base.handler.dynamic.rest.ISysDynamicAttrValueServiceRest: INFO
+
+webroot:
+  # 总工程服务
+  skyeye-pro: skyeye-pro-${spring.profiles.active}
+  # 财政服务
+  skyeye-ifs: skyeye-ifs-${spring.profiles.active}
+  # 项目相关的服务
+  skyeye-project: skyeye-project-${spring.profiles.active}
+
+feign:
+  client:
+    config:
+      # 全局配置
+      default:
+        loggerLevel: FULL
+
+seata:
+  # 总开关。默认 false：不连 TC、@GlobalTransactional 不生效；生产启用：SEATA_ENABLED=true
+  enabled: true
+  # 当前微服务在 Seata 中的应用名，一般与 spring.application.name 一致
+  application-id: ${spring.application.name}
+  # 事务分组名，须与 seataServer.properties 中 service.vgroupMapping.xxx 对应
+  tx-service-group: skyeye_tx_group
+  # false：关闭 Seata 默认数据源代理；改由 baomidou dynamic-datasource 代理
+  # 注意：业务端不需要 seata.store（会话库只在 TC）；本库只需建 undo_log，连接用本服务 jdbc
+  enable-auto-data-source-proxy: false
+  service:
+    # 事务组 -> 集群名映射（与 TC 侧 vgroupMapping 保持一致；Nacos 也有一份作兜底）
+    vgroup-mapping:
+      skyeye_tx_group: default
+  # Seata Server 通过下方 registry.nacos 发现，无需 grouplist 直连
+  registry:
+    type: nacos
+    nacos:
+      # 与 skyeye-seata 注册名一致（bootstrap: seata-server-${profile}）
+      application: seata-server-${spring.profiles.active}
+      server-addr: ${spring.cloud.nacos.discovery.server-addr}
+      group: DEFAULT_GROUP
+      # 须与 Seata Server 注册的 namespace 一致（注意各服务 profiles 是否相同）
+      namespace: ${spring.profiles.active}
+      cluster: default
+  # 运行参数从 Nacos 拉取（DataId 与 skyeye-seata/seataServer.properties 一致）
+  config:
+    type: nacos
+    nacos:
+      server-addr: ${spring.cloud.nacos.config.server-addr}
+      group: DEFAULT_GROUP
+      namespace: ${spring.profiles.active}
+      data-id: seataServer.properties

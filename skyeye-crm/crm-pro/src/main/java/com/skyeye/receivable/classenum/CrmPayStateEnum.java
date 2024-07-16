@@ -1,0 +1,34 @@
+package com.skyeye.receivable.classenum;
+
+import com.skyeye.common.base.classenum.SkyeyeEnumClass;
+import lombok.AllArgsConstructor;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+
+/**
+ * @ClassName: CrmPayStateEnum
+ * @Description: 付款状态枚举类
+ * @author: skyeye云系列--lqy
+ * @date: 2023/2/25 23:06
+ * @Copyright: 2023 https://gitee.com/doc_wei01/skyeye Inc. All rights reserved.
+ * 注意：本内容仅限购买后使用.禁止私自外泄以及用于其他的商业目的
+ */
+@Getter
+@NoArgsConstructor
+@AllArgsConstructor
+public enum CrmPayStateEnum implements SkyeyeEnumClass {
+
+    PAY_STATE(0, "未回款", "red",true, true),
+    PART_PAY_STATE(1, "部分回款", "blue",true, false),
+    PAID_STATE(2, "已回款","green", true, false);
+
+    private Integer key;
+
+    private String value;
+
+    private String color;
+
+    private Boolean show;
+
+    private Boolean isDefault;
+}
