@@ -1,0 +1,50 @@
+/*******************************************************************************
+ * Copyright 卫志强 QQ：598748873@qq.com Inc. All rights reserved. 开源地址：https://gitee.com/doc_wei01/skyeye
+ ******************************************************************************/
+
+package com.skyeye.doc.gitcode.service;
+
+import com.skyeye.base.business.service.SkyeyeBusinessService;
+import com.skyeye.common.object.InputObject;
+import com.skyeye.common.object.OutputObject;
+import com.skyeye.doc.gitcode.entity.GitCodeIssue;
+
+/**
+ * @ClassName: GitCodeIssueService
+ * @Description: GitCode Issue服务接口
+ * @author: skyeye云系列--卫志强
+ * @date: 2025/1/1 12:00
+ * @Copyright: 2025 https://gitee.com/doc_wei01/skyeye Inc. All rights reserved.
+ * 注意：本内容仅限购买后使用.禁止私自外泄以及用于其他的商业目
+ */
+public interface GitCodeIssueService extends SkyeyeBusinessService<GitCodeIssue> {
+
+    void updateIssueState(InputObject inputObject, OutputObject outputObject);
+
+    void updateIssueRecordBug(InputObject inputObject, OutputObject outputObject);
+
+    void updateIssueRecordRequirement(InputObject inputObject, OutputObject outputObject);
+
+    void updateIssueBugCompleted(InputObject inputObject, OutputObject outputObject);
+
+    void updateIssueRequirementCompleted(InputObject inputObject, OutputObject outputObject);
+
+    /**
+     * 上传图片到Issue
+     */
+    void insertUploadImageToIssue(InputObject inputObject, OutputObject outputObject);
+
+    /**
+     * 更新Issue评论数量
+     *
+     * @param id    Issue ID
+     * @param isAdd 是否增加, true 增加, false 减少
+     */
+    void updateIssueCommentCount(String id, boolean isAdd);
+
+    /**
+     * 后台分页查询Issue列表
+     */
+    void queryIssueListForAdmin(InputObject inputObject, OutputObject outputObject);
+
+}
