@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+	<modelVersion>4.0.0</modelVersion>
+
+	<parent>
+		<groupId>com.skyeye</groupId>
+		<artifactId>skyeye-parent</artifactId>
+		<version>1.0-SNAPSHOT</version>
+	</parent>
+
+	<groupId>com.skyeye</groupId>
+	<artifactId>skyeye-promote</artifactId>
+	<version>0.0.1-SNAPSHOT</version>
+	<packaging>pom</packaging>
+
+	<modules>
+		<module>skyeye-web</module>
+		<module>skyeye-common</module>
+		<module>skyeye-entity</module>
+		<module>skyeye-quartz</module>
+		<module>skyeye-mq</module>
+		<module>skyeye-userauth</module>
+		<module>skyeye-threed</module>
+		<module>skyeye-code-doc</module>
+		<module>skyeye-gateway</module>
+        <module>skyeye-organization</module>
+        <module>skyeye-api</module>
+        <module>skyeye-base-server</module>
+    </modules>
+
+	<dependencies>
+
+		<!-- 模板引擎 -->
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-thymeleaf</artifactId>
+		</dependency>
+
+	</dependencies>
+
+</project>
