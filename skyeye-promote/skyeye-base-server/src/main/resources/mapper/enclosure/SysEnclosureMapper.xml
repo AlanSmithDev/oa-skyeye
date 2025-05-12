@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="UTF-8" ?>  
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="com.skyeye.enclosure.dao.SysEnclosureDao">
+	
+	<select id="queryEnclosureList" resultType="java.util.Map">
+		SELECT
+			b.id,
+			b.`name`,
+			b.type,
+			b.size,
+			b.path,
+			b.catalog catalogId,
+			DATE_FORMAT(b.create_time, '%Y-%m-%d %H:%i') createTime
+		FROM
+			sys_enclosure b
+		<where>
+			b.create_id = #{createId}
+			<if test="catelogId != null and catelogId != ''">
+				AND b.catalog = #{catelogId}
+			</if>
+			<if test="sqlExtract != '' and sqlExtract != null">
+				${sqlExtract}
+			</if>
+			<if test="keyword != null and keyword != ''">
+				AND b.`name` LIKE '%${keyword}%'
+			</if>
+		</where>
+		ORDER BY b.create_time DESC
+	</select>
+	
+	<select id="queryEnclosureInfo" resultType="java.util.Map">
+		SELECT
+			id,
+			`name`,
+			path fileAddress,
+			`type`,
+			`size`
+		FROM
+			sys_enclosure
+		WHERE instr(concat(',', #{enclosure},','), concat(',', id, ','));
+	</select>
+
+	<select id="queryEnclosureTree" resultType="java.util.Map">
+		SELECT
+			b.id,
+			b.`name`,
+			b.catalog parentId,
+			b.path fileAddress,
+			'file' objectType
+		FROM
+			sys_enclosure b
+		<where>
+			b.create_id = #{userId}
+		</where>
+	</select>
+	
+</mapper>
