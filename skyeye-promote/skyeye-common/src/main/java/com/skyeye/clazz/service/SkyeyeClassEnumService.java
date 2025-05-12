@@ -1,0 +1,32 @@
+/*******************************************************************************
+ * Copyright 卫志强 QQ：598748873@qq.com Inc. All rights reserved. 开源地址：https://gitee.com/doc_wei01/skyeye
+ ******************************************************************************/
+
+package com.skyeye.clazz.service;
+
+import com.skyeye.base.business.service.SkyeyeBusinessService;
+import com.skyeye.clazz.entity.classenum.SkyeyeClassEnumMation;
+import com.skyeye.common.object.InputObject;
+import com.skyeye.common.object.OutputObject;
+
+import java.util.List;
+import java.util.Map;
+
+/**
+ * @ClassName: SkyeyeClassEnumService
+ * @Description: 基本框架---具备某个特征的枚举类管理服务接口层
+ * @author: skyeye云系列--卫志强
+ * @date: 2022/9/11 19:52
+ * @Copyright: 2022 https://gitee.com/doc_wei01/skyeye Inc. All rights reserved.
+ * 注意：本内容仅限购买后使用.禁止私自外泄以及用于其他的商业目的
+ */
+public interface SkyeyeClassEnumService extends SkyeyeBusinessService<SkyeyeClassEnumMation> {
+
+    void writeClassEnum(InputObject inputObject, OutputObject outputObject);
+
+    void getEnumDataByClassName(InputObject inputObject, OutputObject outputObject);
+
+    List<Map<String, Object>> queryEnumDataList(String className, String filterKey, String filterValue);
+
+    void getEnumDataMapByClassName(InputObject inputObject, OutputObject outputObject);
+}
