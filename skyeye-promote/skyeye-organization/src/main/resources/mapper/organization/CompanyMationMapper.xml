@@ -1,0 +1,133 @@
+<?xml version="1.0" encoding="UTF-8" ?>  
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="com.skyeye.organization.dao.CompanyMationDao">
+	
+	<select id="queryCompanyMationList" parameterType="java.util.Map" resultType="java.util.Map">
+		SELECT
+			a.id,
+			a.`name`,
+			a.remark,
+			a.p_id pId,
+			a.province_id provinceId,
+			a.city_id cityId,
+			a.area_id areaId,
+			a.township_id townshipId,
+			a.absolute_address absoluteAddress,
+			(SELECT COUNT(1) FROM company_mation f WHERE a.id = f.p_id) childsNum,
+			<choose>
+				<when test="tenantId != null and tenantId != ''">
+					(SELECT COUNT(1) FROM tenant_user g WHERE g.company_id = a.id) userNum,
+				</when>
+				<otherwise>
+					(SELECT COUNT(1) FROM sys_eve_user_staff g WHERE g.company_id = a.id) userNum,
+				</otherwise>
+			</choose>
+			(SELECT COUNT(1) FROM company_department h WHERE a.id = h.company_id) departmentNum,
+			CONVERT(a.create_time, char) createTime
+		FROM
+			company_mation a
+		<where>
+			<if test="sqlExtract != '' and sqlExtract != null">
+				${sqlExtract}
+			</if>
+			<if test="keyword != null and keyword != ''">
+				AND a.`name` LIKE '%${keyword}%'
+			</if>
+			<if test="tenantId != null and tenantId != ''">
+				AND a.tenant_id = #{tenantId}
+			</if>
+		</where>
+		ORDER BY a.create_time DESC
+	</select>
+	
+	<select id="queryCompanyMationById" resultType="java.util.Map">
+		SELECT
+			a.id,
+			a.p_id pId,
+			(SELECT COUNT(1) FROM company_mation b WHERE b.p_id = a.id) childsNum
+		FROM
+			company_mation a
+		WHERE a.id = #{id}
+		<if test="tenantId != null and tenantId != ''">
+			AND a.tenant_id = #{tenantId}
+		</if>
+	</select>
+	
+	<select id="queryCompanyDepartMentNumMationById" resultType="java.util.Map">
+		SELECT 
+			COUNT(1) departmentNum
+		FROM 
+			company_department a 
+		WHERE a.company_id = #{id}
+		<if test="tenantId != null and tenantId != ''">
+			AND a.tenant_id = #{tenantId}
+		</if>
+	</select>
+	
+	<select id="queryCompanyUserNumMationById" resultType="java.util.Map">
+		SELECT 
+			COUNT(1) companyUserNum
+		FROM
+			<choose>
+				<when test="tenantId != null and tenantId != ''">
+					tenant_user a
+				</when>
+				<otherwise>
+					sys_eve_user_staff a
+				</otherwise>
+			</choose>
+		WHERE a.company_id = #{id}
+	</select>
+	
+	<select id="queryCompanyMationListTree" parameterType="java.util.Map" resultType="java.util.Map">
+		SELECT
+			a.id,
+			a.`name` title,
+			a.p_id parentId,
+			'[{"type": "0", "isChecked": "0"}]' checkArr
+		FROM
+			company_mation a
+		<where>
+			<if test="tenantId != null and tenantId != ''">
+				AND a.tenant_id = #{tenantId}
+			</if>
+		</where>
+		ORDER BY a.p_id ASC
+	</select>
+	
+	<select id="queryCompanyListToSelect" parameterType="java.util.Map" resultType="java.util.Map">
+		SELECT
+			a.id,
+			a.`name`,
+		   '企业' title,
+			a.p_id parentId
+		FROM
+			company_mation a
+		<where>
+			<if test="tenantId != null and tenantId != ''">
+				AND a.tenant_id = #{tenantId}
+			</if>
+		</where>
+	</select>
+
+    <select id="queryCompanyList" resultType="java.util.Map">
+		SELECT
+			a.id,
+			a.`name`,
+			a.p_id pId,
+			'isCompany' folderType,
+			1 isParent,
+			'' `email`
+		FROM
+			company_mation a
+		<where>
+			<if test="id != '' and id != null">
+				AND a.id = #{id}
+			</if>
+			<if test="tenantId != null and tenantId != ''">
+				AND a.tenant_id = #{tenantId}
+			</if>
+		</where>
+	</select>
+
+</mapper>

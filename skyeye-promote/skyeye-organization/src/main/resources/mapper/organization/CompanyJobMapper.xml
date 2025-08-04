@@ -1,0 +1,110 @@
+<?xml version="1.0" encoding="UTF-8" ?>  
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="com.skyeye.organization.dao.CompanyJobDao">
+	
+	<select id="queryCompanyJobList" resultType="java.util.Map">
+		SELECT
+			a.id,
+			a.`name`,
+			a.remark,
+			<choose>
+				<when test="tenantId != null and tenantId != ''">
+					(SELECT COUNT(1) FROM tenant_user b WHERE b.job_id = a.id) userNum,
+				</when>
+				<otherwise>
+					(SELECT COUNT(1) FROM sys_eve_user_staff b WHERE b.job_id = a.id) userNum,
+				</otherwise>
+			</choose>
+			a.parent_id parentId,
+			a.company_id companyId,
+			a.department_id departmentId,
+			a.create_id createId,
+			CONVERT(a.create_time, char) createTime,
+			a.last_update_id lastUpdateId,
+			CONVERT(a.last_update_time, char) lastUpdateTime
+		FROM
+			company_job a
+		<where>
+			<if test="sqlExtract != '' and sqlExtract != null">
+				${sqlExtract}
+			</if>
+			<if test="keyword != null and keyword != ''">
+				AND a.`name` LIKE '%${keyword}%'
+			</if>
+			<if test="tenantId != null and tenantId != ''">
+				AND a.tenant_id = #{tenantId}
+			</if>
+		</where>
+		ORDER BY a.create_time DESC
+	</select>
+	
+	<select id="queryCompanyJobListTreeByDepartmentId" parameterType="java.util.Map" resultType="java.util.Map">
+		SELECT
+			a.id,
+			a.`name` title,
+			a.parent_id parentId,
+			'[{"type": "0", "isChecked": "0"}]' checkArr
+		FROM
+			company_job a
+		WHERE a.department_id = #{departmentId}
+		<if test="tenantId != null and tenantId != ''">
+			AND a.tenant_id = #{tenantId}
+		</if>
+		ORDER BY a.parent_id ASC
+	</select>
+	
+	<select id="queryCompanyJobSimpleList" resultType="java.util.Map">
+		SELECT
+			a.id,
+			a.`name`,
+			'职位' title,
+			a.parent_id parentId,
+			a.department_id departmentId
+		FROM
+			company_job a
+		<where>
+			<if test="departmentId != '' and departmentId != null">
+				a.department_id = #{departmentId}
+			</if>
+			<if test="pId != '' and pId != null">
+				AND INSTR(CONCAT(',', a.parent_id, ','), CONCAT(',', #{pId}, ','))
+			</if>
+			<if test="id != '' and id != null">
+				AND a.id != #{id}
+			</if>
+			<if test="tenantId != null and tenantId != ''">
+				AND a.tenant_id = #{tenantId}
+			</if>
+		</where>
+	</select>
+
+	<select id="queryJobList" resultType="java.util.Map">
+		SELECT
+			a.id,
+			a.`name`,
+			a.department_id pId,
+			'isJob' folderType,
+			1 isParent,
+			'' `email`
+		FROM
+			company_job a
+		<where>
+			<if test="companyIds != null and companyIds.size() &gt; 0">
+				a.company_id IN
+				<foreach collection="companyIds" item="companyId" index="index" open="(" close=")" separator=",">
+					#{companyId}
+				</foreach>
+			</if>
+			<if test="departmentIds != null and departmentIds.size() &gt; 0">
+				AND a.department_id IN
+				<foreach collection="departmentIds" item="departmentId" index="index" open="(" close=")" separator=",">
+					#{departmentId}
+				</foreach>
+			</if>
+			<if test="tenantId != null and tenantId != ''">
+				AND a.tenant_id = #{tenantId}
+			</if>
+		</where>
+	</select>
+
+</mapper>
