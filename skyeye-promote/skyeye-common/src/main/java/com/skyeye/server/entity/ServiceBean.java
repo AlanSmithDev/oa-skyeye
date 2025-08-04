@@ -1,0 +1,136 @@
+/*******************************************************************************
+ * Copyright 卫志强 QQ：598748873@qq.com Inc. All rights reserved. 开源地址：https://gitee.com/doc_wei01/skyeye
+ ******************************************************************************/
+
+package com.skyeye.server.entity;
+
+import com.baomidou.mybatisplus.annotation.FieldStrategy;
+import com.baomidou.mybatisplus.annotation.TableField;
+import com.baomidou.mybatisplus.annotation.TableId;
+import com.baomidou.mybatisplus.annotation.TableName;
+import com.baomidou.mybatisplus.extension.handlers.JacksonTypeHandler;
+import com.skyeye.annotation.api.ApiModel;
+import com.skyeye.annotation.api.ApiModelProperty;
+import com.skyeye.annotation.api.Property;
+import com.skyeye.attr.entity.AttrDefinition;
+import com.skyeye.common.entity.CommonInfo;
+import com.skyeye.common.enumeration.ServiceBeanType;
+import com.skyeye.common.enumeration.WhetherEnum;
+import lombok.Data;
+
+import java.util.List;
+
+/**
+ * @ClassName: ServiceBean
+ * @Description: 服务类注册实体类
+ * @author: skyeye云系列--卫志强
+ * @date: 2022/9/18 13:11
+ * @Copyright: 2022 https://gitee.com/doc_wei01/skyeye Inc. All rights reserved.
+ * 注意：本内容仅限购买后使用.禁止私自外泄以及用于其他的商业目的
+ */
+@Data
+@TableName(value = "skyeye_class_service_bean", autoResultMap = true)
+@ApiModel("服务类注册实体类")
+public class ServiceBean extends CommonInfo {
+
+    @TableId("id")
+    @ApiModelProperty("主键id")
+    private String id;
+
+    @TableField(value = "spring_application_name", updateStrategy = FieldStrategy.NEVER)
+    @ApiModelProperty("服务名")
+    private String springApplicationName;
+
+    @TableField(exist = false)
+    @Property("服务名(中文名称)")
+    private String applicationName;
+
+    @TableField(value = "app_id", updateStrategy = FieldStrategy.NEVER)
+    @ApiModelProperty("应用的appId")
+    private String appId;
+
+    @TableField("class_name")
+    @ApiModelProperty(value = "服务类的className", required = "required")
+    private String className;
+
+    @TableField("`name`")
+    @ApiModelProperty(value = "服务名称", required = "required")
+    private String name;
+
+    @TableField("remark")
+    @ApiModelProperty(value = "备注")
+    private String remark;
+
+    @TableField("group_name")
+    @ApiModelProperty(value = "所属分组")
+    private String groupName;
+
+    @TableField("table_name")
+    @ApiModelProperty(value = "表名称")
+    private String tableName;
+
+    @TableField("tenant")
+    @ApiModelProperty(value = "租户类型")
+    private String tenant;
+
+    @TableField("manage_show")
+    @ApiModelProperty(value = "是否可以在界面上进行管理")
+    private Boolean manageShow;
+
+    @TableField("entity_class_name")
+    @ApiModelProperty(value = "实体类的className")
+    private String entityClassName;
+
+    @TableField(exist = false)
+    @ApiModelProperty(value = "实体类的属性集合", required = "json")
+    private List<AttrDefinition> attrDefinitionList;
+
+    @TableField("flowable")
+    @ApiModelProperty(value = "是否开启流程", enumClass = WhetherEnum.class, required = "required")
+    private Boolean flowable;
+
+    @TableField("team_auth")
+    @ApiModelProperty(value = "是否开启团队权限管理", enumClass = WhetherEnum.class, required = "required")
+    private Boolean teamAuth;
+
+    @TableField("allow_dynamic_attr_key")
+    @ApiModelProperty(value = "是否允许添加动态属性", enumClass = WhetherEnum.class, defaultValue = "1")
+    private Boolean allowDynamicAttrKey;
+
+    @TableField("operator_user_info")
+    @ApiModelProperty(value = "是否具备操作信息", enumClass = WhetherEnum.class)
+    private Boolean operatorUserInfo;
+
+    @TableField("base_general_info")
+    @ApiModelProperty(value = "是否具备公共信息", enumClass = WhetherEnum.class)
+    private Boolean baseGeneralInfo;
+
+    @TableField("has_version_control")
+    @ApiModelProperty(value = "是否开启版本控制", enumClass = WhetherEnum.class)
+    private Boolean hasVersionControl;
+
+    @TableField("has_delete_flag")
+    @ApiModelProperty(value = "是否开启逻辑删除", enumClass = WhetherEnum.class)
+    private Boolean hasDeleteFlag;
+
+    @TableField("has_redis_cache")
+    @ApiModelProperty(value = "是否开启Redis缓存", enumClass = WhetherEnum.class)
+    private Boolean hasRedisCache;
+
+    @TableField("redis_cache_name")
+    @ApiModelProperty(value = "redis缓存名称")
+    private String redisCacheName;
+
+    @TableField("redis_cache_time")
+    @ApiModelProperty(value = "redis缓存时间，单位秒，-1代表永久缓存")
+    private String redisCacheTime;
+
+    @TableField(value = "redis_cache_value", typeHandler = JacksonTypeHandler.class)
+    @ApiModelProperty(value = "redis缓存的键", defaultValue = "[\"id\"]")
+    private List<String> redisCacheValue;
+
+    @TableField(value = "`type`", updateStrategy = FieldStrategy.NEVER)
+    @ApiModelProperty(value = "业务对象类型", enumClass = ServiceBeanType.class)
+    private Integer type;
+
+}
