@@ -1,0 +1,36 @@
+/*******************************************************************************
+ * Copyright 卫志强 QQ：598748873@qq.com Inc. All rights reserved. 开源地址：https://gitee.com/doc_wei01/skyeye
+ ******************************************************************************/
+
+package com.skyeye.menu.service;
+
+import java.util.List;
+import java.util.Map;
+
+/**
+ * @ClassName: RoleMenuService
+ * @Description: 角色菜单服务接口
+ * @author: skyeye云系列--卫志强
+ * @date: 2025/2/3 9:39
+ * @Copyright: 2025 https://gitee.com/doc_wei01/skyeye Inc. All rights reserved.
+ * 注意：本内容仅限购买后使用.禁止私自外泄以及用于其他的商业目的
+ */
+public interface RoleMenuService {
+
+    /**
+     * 根据角色ID(逗号隔开的字符串)获取该角色拥有的菜单列表
+     *
+     * @param roleIds       角色id(逗号隔开的字符串)
+     * @param userIdAndType userIdAndType
+     * @return 该角色拥有的菜单列表
+     * @throws Exception
+     */
+    List<Map<String, Object>> getRoleHasMenuListByRoleIds(String roleIds, String userIdAndType);
+
+    List<Map<String, Object>> queryMenuListByMenuIds(List<String> menuIds, String userIdAndType);
+
+    List<Map<String, Object>> distinctAndSortMenuList(List<Map<String, Object>> menuList, String userIdAndType);
+
+    List<Map<String, Object>> queryAllMenuList(String userIdAndType);
+
+}
