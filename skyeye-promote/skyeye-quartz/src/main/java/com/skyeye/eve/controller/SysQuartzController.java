@@ -1,0 +1,49 @@
+/*******************************************************************************
+ * Copyright 卫志强 QQ：598748873@qq.com Inc. All rights reserved. 开源地址：https://gitee.com/doc_wei01/skyeye
+ ******************************************************************************/
+
+package com.skyeye.eve.controller;
+
+import com.skyeye.annotation.api.Api;
+import com.skyeye.annotation.api.ApiImplicitParam;
+import com.skyeye.annotation.api.ApiImplicitParams;
+import com.skyeye.annotation.api.ApiOperation;
+import com.skyeye.common.object.InputObject;
+import com.skyeye.common.object.OutputObject;
+import com.skyeye.eve.rest.quartz.SysQuartzMation;
+import com.skyeye.eve.service.SysQuartzService;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+
+@RestController
+@Api(value = "定时任务", tags = "定时任务", modelName = "定时任务模块")
+public class SysQuartzController {
+
+    @Autowired
+    private SysQuartzService sysQuartzService;
+
+    @ApiOperation(id = "startUpTaskQuartz", value = "启动定时任务", method = "POST", allUse = "2")
+    @ApiImplicitParams(classBean = SysQuartzMation.class)
+    @RequestMapping("/post/SysQuartzController/startUpTaskQuartz")
+    public void startUpTaskQuartz(InputObject inputObject, OutputObject outputObject) {
+        sysQuartzService.startUpTaskQuartz(inputObject, outputObject);
+    }
+
+    @ApiOperation(id = "stopAndDeleteTaskQuartz", value = "停止并删除定时任务", method = "POST", allUse = "0")
+    @ApiImplicitParams({
+        @ApiImplicitParam(id = "objectId", name = "objectId", value = "任务的唯一值，例如：工作计划的id等", required = "required")})
+    @RequestMapping("/post/SysQuartzController/stopAndDeleteTaskQuartz")
+    public void stopAndDeleteTaskQuartz(InputObject inputObject, OutputObject outputObject) {
+        sysQuartzService.stopAndDeleteTaskQuartz(inputObject, outputObject);
+    }
+
+    @ApiOperation(id = "batchStopAndDeleteTaskQuartz", value = "批量停止并删除定时任务", method = "POST", allUse = "0")
+    @ApiImplicitParams({
+        @ApiImplicitParam(id = "objectIds", name = "objectIds", value = "任务的唯一值，例如：工作计划的id等，多个用逗号隔开", required = "required")})
+    @RequestMapping("/post/SysQuartzController/batchStopAndDeleteTaskQuartz")
+    public void batchStopAndDeleteTaskQuartz(InputObject inputObject, OutputObject outputObject) {
+        sysQuartzService.batchStopAndDeleteTaskQuartz(inputObject, outputObject);
+    }
+
+}
