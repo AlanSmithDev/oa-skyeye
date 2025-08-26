@@ -1,0 +1,447 @@
+<?xml version="1.0" encoding="UTF-8" ?>  
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="com.skyeye.personnel.dao.SysEveUserDao">
+	
+	<select id="querySysUserList" resultType="java.util.Map">
+		SELECT
+			a.id,
+			a.user_code userCode,
+			a.is_term_of_validity isTermOfValidity,
+			a.start_time startTime,
+			a.end_time endTime,
+			k.id staffId,
+			k.job_number jobNumber,
+			k.email email,
+			k.user_name userName,
+			k.user_sex userSex,
+			a.user_lock userLock,
+			(SELECT group_concat(distinct b.`name`) FROM sys_eve_role b WHERE INSTR(CONCAT(',', a.role_id, ','), CONCAT(',', b.id, ','))) roleName,
+			k.company_id companyId,
+			k.department_id departmentId,
+			k.job_id jobId,
+			a.create_id createId,
+			CONVERT(a.create_time, char) createTime
+		FROM
+			sys_eve_user a,
+			sys_eve_user_staff k
+		<where>
+			a.id = k.user_id
+			<if test="sqlExtract != '' and sqlExtract != null">
+				${sqlExtract}
+			</if>
+			<if test="keyword != '' and keyword != null">
+				AND (a.user_code like '%${keyword}%' OR k.user_name like '%${keyword}%' OR k.job_number like '%${keyword}%')
+			</if>
+		</where>
+		ORDER BY a.user_lock ASC, a.create_time DESC
+	</select>
+	
+	<select id="queryMationByUserCode" resultType="java.util.Map">
+		SELECT
+			a.id,
+			a.user_code userCode,
+			a.pwd_num_enc pwdNum,
+			a.`password`,
+			a.user_lock userLock,
+			a.is_term_of_validity isTermOfValidity,
+			a.start_time startTime,
+			a.end_time endTime,
+			IFNULL(a.role_id, '') roleId,
+			b.win_bg_pic_url winBgPicUrl,
+			b.win_lock_bg_pic_url winLockBgPicUrl,
+			b.win_theme_color winThemeColor,
+			b.win_start_menu_size winStartMenuSize,
+			b.win_task_position winTaskPosition,
+			b.win_bg_pic_vague winBgPicVague,
+			b.win_bg_pic_vague_value winBgPicVagueValue,
+			b.win_bottom_menu_icon winBottomMenuIcon,
+			c.id staffId,
+			c.phone,
+			c.email,
+			c.job_number jobNumber,
+			c.user_name userName,
+			c.user_photo userPhoto,
+			c.company_id companyId,
+			c.department_id departmentId,
+			c.job_id jobId,
+			c.user_sex userSex,
+			c.user_sign userSign,
+			c.background_image backgroundImage
+		FROM
+			sys_eve_user a
+			LEFT JOIN sys_eve_user_install b ON a.id = b.user_id,
+			sys_eve_user_staff c
+		WHERE
+			a.user_code = #{userCode}
+		AND a.id = c.user_id
+	</select>
+	
+	<update id="editRoleIdsByUserId" parameterType="java.util.Map">
+		UPDATE sys_eve_user
+		<set>
+			role_id = #{roleIds}
+		</set>
+		WHERE id = #{id}
+	</update>
+	
+	<select id="queryDeskTopsMenuByUserId" resultType="java.util.Map">
+		SELECT
+			c.id,
+			c.`name`,
+			c.icon,
+			c.page_type pageType,
+			c.page_url pageUrl,
+			c.path,
+			c.open_type openType,
+			c.type menuType,
+			'-1' maxOpen,
+			'false' extend,
+			null childs,
+			c.parent_id parentId,
+			c.level menuLevel,
+			c.icon_color iconColor,
+			c.icon_bg iconBg,
+			c.icon_pic iconPic,
+			c.icon_type iconType,
+			IFNULL(c.desktop_id, '') desktopId,
+			IFNULL(g.sys_url, '') sysWinUrl
+		FROM
+			sys_eve_user a,
+			sys_eve_role_menu b,
+			sys_eve_menu c,
+			sys_eve_win g
+		WHERE a.id = #{userId}
+		AND INSTR(CONCAT(',', a.role_id, ','), CONCAT(',', b.role_id, ','))
+		AND b.menu_id = c.id AND c.sys_type = '1'
+		AND g.id = c.sys_win_id
+		GROUP BY c.id
+		ORDER BY c.order_num ASC
+	</select>
+	
+	<select id="queryUserDetailsMationByUserId" resultType="java.util.Map">
+		SELECT
+			a.user_id id,
+			a.id staffId,
+			CONCAT_WS('_', a.job_number, a.user_name) `name`,
+			a.job_number jobNumber,
+			a.user_name userName,
+			a.user_photo userPhoto,
+			a.user_idcard userIdCard,
+			a.user_sex userSex,
+		    a.state,
+			a.email,
+			a.phone userPhone,
+			a.home_phone userHomePhone,
+			a.qq userQq,
+			a.work_time workTime,
+			a.entry_time entryTime,
+			IFNULL(a.quit_time, '') quitTime,
+			IFNULL(a.quit_reason, '') quitReason,
+			a.annual_leave annualLeave,
+			a.holiday_number holidayNumber,
+			a.retired_holiday_number retiredHolidayNumber,
+			IFNULL(a.user_sign, '暂无签名') userSign,
+			CASE a.state WHEN '1' THEN 'state-up' WHEN '2' THEN 'state-down' END colorClass,
+		    a.company_id companyId,
+			a.department_id departmentId,
+			a.job_id jobId,
+			a.job_score_id jobScoreId,
+			b.user_code userCode
+		FROM
+			sys_eve_user_staff a,
+			sys_eve_user b
+		WHERE a.user_id = #{userId}
+		AND b.id = a.user_id
+	</select>
+	
+	<update id="editUserDetailsMationByUserId" parameterType="java.util.Map">
+		UPDATE sys_eve_user_staff
+		<set>
+			user_idcard = #{userIdCard},
+			user_sex = #{userSex},
+			<if test="userPhoto != '' and userPhoto != null">
+				user_photo = #{userPhoto},
+			</if>
+			email = #{userEmail},
+			phone = #{userPhone},
+			home_phone = #{userHomePhone},
+			qq = #{userQq},
+			user_sign = #{userSign},
+		</set>
+		WHERE user_id = #{userId}
+	</update>
+	
+	<select id="queryUserSchoolMationByUserId" parameterType="java.util.Map" resultType="java.util.Map">
+		SELECT
+			c.id schoolId,
+			c.power schoolPower
+		FROM
+			sys_eve_user_staff a,
+			sys_eve_user_staff_teacher b,
+			school_mation c
+		WHERE
+			a.user_id = #{userId}
+		AND a.id = b.staff_id
+		AND c.id = b.school_id
+		LIMIT 1
+	</select>
+
+	<select id="queryUserStaffToTree" resultType="java.util.Map">
+		SELECT
+			a.user_id id,
+			<choose>
+				<when test="tenantId != null and tenantId != ''">
+					CONCAT_WS('_', b.job_number, a.user_name) `name`,
+					b.job_id pId,
+					b.department_id departmentId,
+					b.email,
+				</when>
+				<otherwise>
+					CONCAT_WS('_', a.job_number, a.user_name) `name`,
+					a.job_id pId,
+					a.department_id departmentId,
+					a.email,
+				</otherwise>
+			</choose>
+			'isPeople' folderType,
+			0 isParent,
+			a.phone
+		FROM
+			sys_eve_user_staff a
+			<if test="tenantId != null and tenantId != ''">
+				,tenant_user b
+			</if>
+		<where>
+			LENGTH(a.user_id) > 0 AND a.user_id != ''
+			<if test="companyId != null and companyId != ''">
+				<choose>
+					<when test="tenantId != null and tenantId != ''">
+						AND b.company_id = #{companyId}
+					</when>
+					<otherwise>
+						AND a.company_id = #{companyId}
+					</otherwise>
+				</choose>
+			</if>
+			<if test="userId != null and userId != ''">
+				AND a.user_id != #{userId}
+			</if>
+			<if test="hasEmail != null and hasEmail != ''">
+				<choose>
+					<when test="tenantId != null and tenantId != ''">
+						AND LENGTH(b.email) > 0 AND b.email != ''
+					</when>
+					<otherwise>
+						AND LENGTH(a.email) > 0 AND a.email != ''
+					</otherwise>
+				</choose>
+			</if>
+			<if test="tenantId != null and tenantId != ''">
+				AND b.tenant_id = #{tenantId}
+				AND b.staff_id = a.id
+			</if>
+		</where>
+	</select>
+
+	<select id="queryUserStaffDepToTree" resultType="java.util.Map">
+		SELECT
+			a.user_id id,
+			<choose>
+				<when test="tenantId != null and tenantId != ''">
+					CONCAT_WS('_', b.job_number, a.user_name) `name`,
+					b.department_id pId,
+					b.department_id departmentId,
+					b.email,
+				</when>
+				<otherwise>
+					CONCAT_WS('_', a.job_number, a.user_name) `name`,
+					a.department_id pId,
+					a.department_id departmentId,
+					a.email,
+				</otherwise>
+			</choose>
+			'isPeople' folderType,
+			0 isParent,
+			a.phone
+
+		FROM
+			sys_eve_user_staff a
+			<if test="tenantId != null and tenantId != ''">
+				,tenant_user b
+			</if>
+		<where>
+			LENGTH(a.user_id) > 0 AND a.user_id != ''
+			<if test="companyId != null and companyId != ''">
+				<choose>
+					<when test="tenantId != null and tenantId != ''">
+						AND b.company_id = #{companyId}
+					</when>
+					<otherwise>
+						AND a.company_id = #{companyId}
+					</otherwise>
+				</choose>
+			</if>
+			<if test="departmentId != null and departmentId != ''">
+				<choose>
+					<when test="tenantId != null and tenantId != ''">
+						AND b.department_id = #{departmentId}
+					</when>
+					<otherwise>
+						AND a.department_id = #{departmentId}
+					</otherwise>
+				</choose>
+			</if>
+			<if test="userId != null and userId != ''">
+				AND a.user_id != #{userId}
+			</if>
+			<if test="hasEmail != null and hasEmail != ''">
+				<choose>
+					<when test="tenantId != null and tenantId != ''">
+						AND LENGTH(b.email) > 0 AND b.email != ''
+					</when>
+					<otherwise>
+						AND LENGTH(a.email) > 0 AND a.email != ''
+					</otherwise>
+				</choose>
+			</if>
+			<if test="tenantId != null and tenantId != ''">
+				AND b.tenant_id = #{tenantId}
+				AND b.staff_id = a.id
+			</if>
+		</where>
+	</select>
+
+	<select id="queryTalkGroupUserListByUserId" parameterType="java.util.Map" resultType="java.util.Map">
+			SELECT
+				a.id,
+				a.group_name `name`,
+				'0' pId,
+				'isGroup' folderType,
+				1 isParent,
+				'' `email`,
+				'' phone,
+				'' departmentId
+			FROM
+				sys_talk_group a,
+				sys_talk_group_user b
+			WHERE a.id = b.group_id
+			AND b.user_id = #{userId}
+		UNION ALL
+			SELECT
+				a.user_id id,
+				<choose>
+					<when test="tenantId != null and tenantId != ''">
+						CONCAT_WS('_', b.job_number, a.user_name) `name`,
+						b.department_id departmentId,
+						b.email,
+					</when>
+					<otherwise>
+						CONCAT_WS('_', a.job_number, a.user_name) `name`,
+						a.department_id departmentId,
+						a.email,
+					</otherwise>
+				</choose>
+				c.group_id pId,
+				'isPeople' folderType,
+				0 isParent,
+				a.phone
+			FROM
+				sys_eve_user_staff a,
+				sys_talk_group_user b,
+				sys_talk_group_user c
+				<if test="tenantId != null and tenantId != ''">
+					,tenant_user d
+				</if>
+			WHERE a.user_id = c.user_id
+			AND b.user_id = #{userId}
+			AND c.group_id = b.group_id
+			AND LENGTH(a.user_id) > 0 AND a.user_id != ''
+			<if test="hasEmail != null and hasEmail != ''">
+				<choose>
+					<when test="tenantId != null and tenantId != ''">
+						AND LENGTH(b.email) > 0 AND b.email != ''
+					</when>
+					<otherwise>
+						AND LENGTH(a.email) > 0 AND a.email != ''
+					</otherwise>
+				</choose>
+			</if>
+			<if test="tenantId != null and tenantId != ''">
+				AND d.tenant_id = #{tenantId}
+				AND d.staff_id = a.id
+			</if>
+	</select>
+
+	<select id="queryWxUserMationByOpenId" parameterType="java.lang.String" resultType="java.util.Map">
+		SELECT
+			a.id,
+			a.open_id openId,
+			a.user_id userId,
+			a.join_time joinTime
+		FROM
+			wx_user_mation a
+		WHERE
+			a.open_id = #{openId}
+		LIMIT 1
+	</select>
+
+	<select id="queryUserMationByOpenId" parameterType="java.lang.String" resultType="java.util.Map">
+		SELECT
+			a.id,
+			a.user_code userCode,
+			a.pwd_num_enc pwdNum,
+			a.`password`,
+			a.user_lock userLock,
+			b.win_bg_pic_url winBgPicUrl,
+			b.win_lock_bg_pic_url winLockBgPicUrl,
+			b.win_theme_color winThemeColor,
+			b.win_start_menu_size winStartMenuSize,
+			b.win_task_position winTaskPosition,
+			b.win_bg_pic_vague winBgPicVague,
+			b.win_bg_pic_vague_value winBgPicVagueValue,
+			b.win_bottom_menu_icon winBottomMenuIcon,
+			c.user_name userName,
+			c.user_photo userPhoto,
+			c.company_id companyId,
+			c.department_id departmentId
+		FROM
+			sys_eve_user a
+			LEFT JOIN sys_eve_user_install b ON a.id = b.user_id
+			LEFT JOIN sys_eve_user_staff c ON a.id = c.user_id,
+			wx_user_mation e
+		WHERE
+			e.open_id = #{openId}
+		  AND a.id = e.user_id
+	</select>
+
+	<select id="queryUserBindMationByUserId" parameterType="java.lang.String" resultType="java.util.Map">
+		SELECT
+			a.id
+		FROM
+			wx_user_mation a
+		WHERE
+			a.user_id = #{userId}
+		LIMIT 1
+	</select>
+
+	<update id="updateBindUserMation" parameterType="java.util.Map">
+		UPDATE wx_user_mation
+		<set>
+			<if test="userId != '' and userId != null">
+				user_id = #{userId},
+			</if>
+			<if test="bindTime != '' and bindTime != null">
+				binding_time = #{bindTime},
+			</if>
+		</set>
+		WHERE open_id = #{openId}
+	</update>
+
+	<insert id="insertWxUserMation" parameterType="java.util.Map">
+		INSERT into wx_user_mation
+			(id, open_id, join_time)
+		VALUES
+			(#{id}, #{openId}, #{joinTime})
+	</insert>
+	
+</mapper>

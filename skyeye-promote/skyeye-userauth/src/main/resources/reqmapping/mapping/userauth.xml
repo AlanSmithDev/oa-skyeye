@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<controller modelName="基础模块">
+	<!-- 
+		- allUse  是否需要登录才能使用   1是   0否  2需要登陆才能访问，但无需授权    默认为否
+	 -->
+	
+	<!-- 聊天开始 -->
+	<url id="companychat002" path="/post/CompanyChatController/editUserSignByUserId" val="编辑签名" allUse="2" groupName="聊天模块">
+		<property id="userSign" name="userSign" ref="" var="签名"/>
+	</url>
+	<!-- 聊天结束 -->
+	
+	<!-- 数据库备份开始 -->
+	<url id="sysdatasqlbackups001" path="/post/SysDataSqlController/querySysDataSqlBackupsList" val="获取历史备份列表" allUse="1" groupName="数据库备份">
+		<property id="limit" name="limit" ref="required,num" var="分页参数,每页多少条数据" />
+	    <property id="page" name="page" ref="required,num" var="分页参数,第几页"/>
+	</url>
+	<url id="sysdatasqlbackups002" path="/post/SysDataSqlController/queryAllTableMationList" val="获取所有表的列表" allUse="2" groupName="数据库备份">
+	</url>
+	<url id="sysdatasqlbackups003" path="/post/SysDataSqlController/insertTableBackUps" val="开始备份" allUse="1" groupName="数据库备份">
+	</url>
+	<url id="sysdatasqlbackups004" path="/post/SysDataSqlController/insertTableReduction" val="开始还原" allUse="1" groupName="数据库备份">
+		<property id="rowId" name="rowId" ref="required" var="数据备份id" />
+	</url>
+	<!-- 数据库备份结束 -->
+	
+	<!-- 系统数据库管理开始 -->
+	<url id="database002" path="/post/SysDataBaseController/querySysDataBaseSelectList" val="获取数据库表名信息" allUse="2" groupName="系统数据库管理">
+	</url>
+	<url id="database003" path="/post/SysDataBaseController/querySysDataBaseDescSelectList" val="获取数据库表备注信息" allUse="2" groupName="系统数据库管理">
+	</url>
+	<!-- 系统数据库管理结束 -->
+	
+    <!-- 系统管理开始 -->
+	<url id="sys033" path="/post/SysEveUserController/editUserDetailsMationByUserId" val="修改个人信息" allUse="2" groupName="系统管理">
+		<property id="userSex" name="userSex" ref="required,num" var="性别" />
+		<property id="userIdCard" name="userIdCard" ref="idcard" var="身份证" />
+		<property id="userPhoto" name="userPhoto" ref="required" var="头像" />
+		<property id="userEmail" name="userEmail" ref="email" var="邮箱" />
+		<property id="userQq" name="userQq" ref="" var="QQ" />
+		<property id="userPhone" name="userPhone" ref="phone" var="手机号" />
+		<property id="userHomePhone" name="userHomePhone" ref="" var="家庭电话" />
+		<property id="userSign" name="userSign" ref="" var="签名" />
+	</url>
+	<!-- 系统管理结束 -->
+	
+</controller>
