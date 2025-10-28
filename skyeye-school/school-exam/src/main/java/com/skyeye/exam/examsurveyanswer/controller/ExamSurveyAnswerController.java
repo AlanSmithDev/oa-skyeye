@@ -1,0 +1,106 @@
+package com.skyeye.exam.examsurveyanswer.controller;
+
+import com.skyeye.annotation.api.Api;
+import com.skyeye.annotation.api.ApiImplicitParam;
+import com.skyeye.annotation.api.ApiImplicitParams;
+import com.skyeye.annotation.api.ApiOperation;
+import com.skyeye.common.entity.search.CommonPageInfo;
+import com.skyeye.common.entity.search.TableSelectInfo;
+import com.skyeye.common.object.InputObject;
+import com.skyeye.common.object.OutputObject;
+import com.skyeye.exam.examsurveyanswer.entity.ExamSurveyAnswer;
+import com.skyeye.exam.examsurveyanswer.service.ExamSurveyAnswerService;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+
+/**
+ * @ClassName: ExamSurveyAnswerController
+ * @Description: 试卷回答信息表管理控制层
+ * @author: skyeye云系列--luyujia
+ * @date: 2024/7/16 11:01
+ * @Copyright: 2024 https://gitee.com/doc_wei01/skyeye Inc. All rights reserved.
+ * 注意：本内容仅限购买后使用.禁止私自外泄以及用于其他的商业目的
+ */
+@RestController
+@Api(value = "试卷回答信息表管理", tags = "试卷回答信息表管理", modelName = "试卷回答信息表管理")
+public class ExamSurveyAnswerController {
+
+    @Autowired
+    private ExamSurveyAnswerService examSurveyAnswerService;
+
+    @ApiOperation(id = "writeExamSurveyAnswer", value = "新增试卷回答信息", method = "POST", allUse = "2")
+    @ApiImplicitParams(classBean = ExamSurveyAnswer.class)
+    @RequestMapping("/post/ExamSurveyAnswerController/writeExamSurveyAnswer")
+    public void writeExamSurveyAnswer(InputObject inputObject, OutputObject outputObject) {
+        examSurveyAnswerService.saveOrUpdateEntity(inputObject, outputObject);
+    }
+
+    @ApiOperation(id = "deleteSurveyAnswerById", value = "根据ID删除试卷回答信息", method = "DELETE", allUse = "2")
+    @ApiImplicitParams({
+        @ApiImplicitParam(id = "id", name = "id", value = "主键id", required = "required")})
+    @RequestMapping("/post/ExamSurveyAnswerController/deleteSurveyAnswerById")
+    public void deleteSurveyAnswerById(InputObject inputObject, OutputObject outputObject) {
+        examSurveyAnswerService.deleteById(inputObject, outputObject);
+    }
+
+    @ApiOperation(id = "querySurveyAnswerById", value = "根据ID获取答卷信息", method = "POST", allUse = "2")
+    @ApiImplicitParams({
+        @ApiImplicitParam(id = "id", name = "id", value = "主键id", required = "required")})
+    @RequestMapping("/post/ExamSurveyAnswerController/querySurveyAnswerById")
+    public void querySurveyAnswerById(InputObject inputObject, OutputObject outputObject) {
+        examSurveyAnswerService.selectById(inputObject, outputObject);
+    }
+
+    @ApiOperation(id = "querySurveyBySurveyIdAndUserId", value = "根据试卷ID和用户Id获取回答信息和试卷信息。学生角度,获取我的某个的回答信息。", method = "POST", allUse = "2")
+    @ApiImplicitParams({
+        @ApiImplicitParam(id = "surveyId", name = "surveyId", value = "试卷Id", required = "required")})
+    @RequestMapping("/post/ExamSurveyAnswerController/querySurveyBySurveyIdAndUserId")
+    public void querySurveyAnswerBquerySurveyBySurveyIdAndUserIdyId(InputObject inputObject, OutputObject outputObject) {
+        examSurveyAnswerService.querySurveyBySurveyIdAndUserId(inputObject, outputObject);
+    }
+
+    @ApiOperation(id = "queryMySurveyAnswerList", value = "获取我的所有答卷信息。", method = "POST", allUse = "2")
+    @RequestMapping("/post/ExamSurveyAnswerController/queryMySurveyAnswerList")
+    public void queryMySurveyAnswerList(InputObject inputObject, OutputObject outputObject) {
+        examSurveyAnswerService.queryMySurveyAnswerList(inputObject, outputObject);
+    }
+
+    @ApiOperation(id = "querySurveyAnswerBySurveyId", value = "根据试卷Id获取试卷回答信息，这张试卷下的所有答卷信息--用户PC端和用户手机端使用", method = "POST", allUse = "2")
+    @ApiImplicitParams(classBean = CommonPageInfo.class)
+    @RequestMapping("/post/ExamSurveyAnswerController/querySurveyAnswerBySurveyId")
+    public void querySurveyAnswerBySurveyId(InputObject inputObject, OutputObject outputObject) {
+        examSurveyAnswerService.querySurveyAnswerBySurveyId(inputObject, outputObject);
+    }
+
+    @ApiOperation(id = "queryFilterApprovedSurveys", value = "筛选我的所有阅卷信息", method = "POST", allUse = "2")
+    @ApiImplicitParams(classBean = CommonPageInfo.class)
+    @RequestMapping("/post/ExamSurveyAnswerController/queryFilterApprovedSurveys")
+    public void queryFilterApprovedSurveys(InputObject inputObject, OutputObject outputObject) {
+        examSurveyAnswerService.queryFilterApprovedSurveys(inputObject, outputObject);
+    }
+
+    @ApiOperation(id = "IsTakeSurveyAnswer", value = "判断是否可以参与回答试卷", method = "POST", allUse = "2")
+    @ApiImplicitParams({
+        @ApiImplicitParam(id = "surveyId", name = "surveyId", value = "试卷Id", required = "required")})
+    @RequestMapping("/post/ExamSurveyAnswerController/IsTakeSurveyAnswer")
+    public void IsTakeSurveyAnswer(InputObject inputObject, OutputObject outputObject) {
+        examSurveyAnswerService.IsTakeSurveyAnswer(inputObject, outputObject);
+    }
+
+    @ApiOperation(id = "queryAllSurveyAnswerListBySurveyId", value = "根据SurveyId获取试卷下面所有回答者信息，这张试卷下的所有答卷的信息", method = "POST", allUse = "2")
+    @ApiImplicitParams(classBean = CommonPageInfo.class)
+    @RequestMapping("/post/ExamSurveyAnswerController/queryAllSurveyAnswerListBySurveyId")
+    public void queryAllSurveyAnswerListBySurveyId(InputObject inputObject, OutputObject outputObject) {
+        examSurveyAnswerService.queryAllSurveyAnswerListBySurveyId(inputObject, outputObject);
+    }
+
+    @ApiOperation(id = "queryAllAnswerListByExamId", value = "获取指定试卷下的所有答卷情况", method = "POST", allUse = "2")
+    @ApiImplicitParams(classBean = TableSelectInfo.class)
+    @RequestMapping("/post/ExamSurveyAnswerController/queryAllAnswerListByExamId")
+    public void queryAllAnswerListByExamId(InputObject inputObject, OutputObject outputObject) {
+        examSurveyAnswerService.queryAllAnswerListByExamId(inputObject, outputObject);
+    }
+
+
+}
