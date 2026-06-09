@@ -1,0 +1,60 @@
+/*******************************************************************************
+ * Copyright 卫志强 QQ：598748873@qq.com Inc. All rights reserved. 开源地址：https://gitee.com/doc_wei01/skyeye
+ ******************************************************************************/
+
+package com.skyeye.rest.shopmaterialnorms.sevice;
+
+import java.util.List;
+import java.util.Map;
+
+/**
+ * @ClassName: IShopMaterialNormsService
+ * @Description: ERP商城购物车信息管理公共的一些操作
+ * @author: skyeye云系列--卫志强
+ * @date: 2023/8/15 10:32
+ * @Copyright: 2023 https://gitee.com/doc_wei01/skyeye Inc. All rights reserved.
+ * 注意：本内容仅限购买后使用.禁止私自外泄以及用于其他的商业目
+ */
+public interface IShopMaterialNormsService {
+    List<Map<String, Object>> queryShopMaterialByNormsIdList(String normsIds);
+
+    List<Map<String, Object>> queryShopMaterialByMaterialIdList(String materialIds);
+
+    /**
+     * 根据id批量获取商城商品信息
+     *
+     * @param ids 商城商品materialId与storeId的关系id
+     * @return
+     */
+    List<Map<String, Object>> queryShopMaterialByIds(List<String> ids);
+
+    /**
+     * 按门店批量预览已上架商城商品（key=storeId, value=预览商品列表）
+     *
+     * @param storeIds     门店id列表
+     * @param limitPerStore 每个门店条数
+     * @return
+     */
+    Map<String, Object> queryShopMaterialPreviewByStoreIds(List<String> storeIds, Integer limitPerStore);
+
+    /**
+     * 根据商品id和门店id批量获取关系id（key: materialId_storeId, value: 关系id）
+     *
+     * @param materialIdList 商品id列表
+     * @param storeIdList    门店id列表（与商品id一一对应）
+     * @return
+     */
+    Map<String, Object> queryShopMaterialMapByMaterialIdAndStoreId(List<String> materialIdList, List<String> storeIdList);
+
+    /**
+     * 根据商品id列表和门店id列表批量获取关系id（IN 查询，非一一对应；key: materialId_storeId, value: 关系id）
+     *
+     * @param materialIdList 商品id列表
+     * @param storeIdList    门店id列表
+     * @return
+     */
+    Map<String, Object> queryShopMaterialMapByMaterialIdsAndStoreIds(List<String> materialIdList, List<String> storeIdList);
+
+    List<Map<String, Object>> queryAllShopMaterialListForChoose();
+
+}

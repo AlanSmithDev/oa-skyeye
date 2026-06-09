@@ -1,0 +1,96 @@
+/*******************************************************************************
+ * Copyright 卫志强 QQ：598748873@qq.com Inc. All rights reserved. 开源地址：https://gitee.com/doc_wei01/skyeye
+ ******************************************************************************/
+
+package com.skyeye.rest.shopmaterialnorms.rest;
+
+import com.skyeye.common.client.ClientConfiguration;
+import org.springframework.cloud.openfeign.FeignClient;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+
+import java.util.Map;
+
+/**
+ * @ClassName: IShopMaterialNormsRest
+ * @Description: ERP商城购物车信息管理公共的一些操作
+ * @author: skyeye云系列--卫志强
+ * @date: 2023/8/15 10:32
+ * @Copyright: 2023 https://gitee.com/doc_wei01/skyeye Inc. All rights reserved.
+ * 注意：本内容仅限购买后使用.禁止私自外泄以及用于其他的商业目
+ */
+@FeignClient(value = "${webroot.skyeye-erp}", configuration = ClientConfiguration.class)
+public interface IShopMaterialNormsRest {
+
+    @PostMapping("/queryShopMaterialByNormsIdList")
+    String queryShopMaterialByNormsIdList(@RequestParam("normsIds") String normsIds);
+
+    @PostMapping("/queryShopMaterialByMaterialIdList")
+    String queryShopMaterialByMaterialIdList(@RequestParam("materialIds") String materialIds);
+
+    /**
+     * 根据id批量获取商城商品信息
+     *
+     * @param ids 主键id，多个逗号隔开
+     * @return
+     */
+    @PostMapping("/queryShopMaterialByIds")
+    String queryShopMaterialByIds(@RequestParam("ids") String ids);
+
+    /**
+     * 按门店批量预览已上架商城商品
+     *
+     * @param storeIds 门店id，多个逗号隔开
+     * @param limit    每个门店返回条数
+     * @return
+     */
+    @PostMapping("/queryShopMaterialPreviewByStoreIds")
+    String queryShopMaterialPreviewByStoreIds(@RequestParam("storeIds") String storeIds,
+                                              @RequestParam(value = "limit", required = false) Integer limit);
+
+    /**
+     * 根据商品id和门店id批量获取商城商品关系id
+     *
+     * @param params materialId、storeId（json数组，一一对应）
+     * @return
+     */
+    @PostMapping("/queryShopMaterialMapByMaterialIdAndStoreId")
+    String queryShopMaterialMapByMaterialIdAndStoreId(Map<String, Object> params);
+
+    /**
+     * 根据商品id和门店id批量获取商城商品关系id（IN 查询，非一一对应）
+     *
+     * @param params materialId、storeId（json数组）
+     * @return
+     */
+    @PostMapping("/queryShopMaterialMapByMaterialIdsAndStoreIds")
+    String queryShopMaterialMapByMaterialIdsAndStoreIds(Map<String, Object> params);
+
+    /**
+     * 新增门店时，将所有商品同步到该门店
+     *
+     * @param storeId 门店id
+     * @return
+     */
+    @PostMapping("/saveShopMaterialStore")
+    String saveShopMaterialStore(@RequestParam("storeId") String storeId);
+
+    /**
+     * 根据门店id删除商城商品信息
+     *
+     * @param storeIds 门店id，多个逗号隔开
+     * @return
+     */
+    @PostMapping("/deleteShopMaterialStoreByStoreIds")
+    String deleteShopMaterialStoreByStoreIds(@RequestParam("storeIds") String storeIds);
+
+    /**
+     * 获取商城商品信息列表供选择
+     *
+     * @return
+     */
+    @GetMapping("/queryAllShopMaterialListForChoose")
+    String queryAllShopMaterialListForChoose();
+
+}
