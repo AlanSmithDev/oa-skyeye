@@ -1,0 +1,36 @@
+/*******************************************************************************
+ * Copyright 卫志强 QQ：598748873@qq.com Inc. All rights reserved. 开源地址：https://gitee.com/doc_wei01/skyeye
+ ******************************************************************************/
+
+package com.skyeye.rest.shopstock.service;
+
+import com.skyeye.base.rest.service.IService;
+
+import java.util.Map;
+
+/**
+ * @ClassName: IShopStockService
+ * @Description: ERP 门店库存（shop_stock）Feign 公共操作
+ */
+public interface IShopStockService extends IService {
+
+    /**
+     * 执行门店产品库存调拨
+     *
+     * @param params 需包含 fromStoreId、toStoreId、applyLinkList（JSON 数组）
+     */
+    void executeStoreProductTransfer(Map<String, Object> params);
+
+    /**
+     * 发货扣减门店库存（Feign 转发至 ERP deductShopStockOnShip）。
+     *
+     * @param params 需包含 storeId、materialId、normsId、count，可选 materialStoreId
+     */
+    void deductShopStockOnShip(Map<String, Object> params);
+
+    /**
+     * 下单校验可售库存（平台货校验供货方）
+     */
+    void checkShopStockForSale(Map<String, Object> params);
+
+}

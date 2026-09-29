@@ -1,0 +1,88 @@
+/*******************************************************************************
+ * Copyright 卫志强 QQ：598748873@qq.com Inc. All rights reserved. 开源地址：https://gitee.com/doc_wei01/skyeye
+ ******************************************************************************/
+
+package com.skyeye.machin.service;
+
+import com.skyeye.base.business.service.SkyeyeBusinessService;
+import com.skyeye.common.object.InputObject;
+import com.skyeye.common.object.OutputObject;
+import com.skyeye.machin.entity.Machin;
+
+import java.util.List;
+import java.util.Map;
+
+/**
+ * @ClassName: MachinService
+ * @Description: 加工单管理服务接口层
+ * @author: skyeye云系列--卫志强
+ * @date: 2023/3/29 17:24
+ * @Copyright: 2021 https://gitee.com/doc_wei01/skyeye Inc. All rights reserved.
+ * 注意：本内容仅限购买后使用.禁止私自外泄以及用于其他的商业目的
+ */
+public interface MachinService extends SkyeyeBusinessService<Machin> {
+
+    void setOrderMationByFromId(List<Map<String, Object>> beans, String idKey, String mationKey);
+
+    void editPickStateById(String id, String pickState);
+
+    void editMachinStateById(String id, String machinState);
+
+    Map<String, String> calcMaterialNormsNumByFromId(String fromId);
+
+    void setMachinMationByFromId(List<Map<String, Object>> beans, String idKey, String mationKey);
+
+    void queryMachinForGanttById(InputObject inputObject, OutputObject outputObject);
+
+    void queryMachinTransRequestById(InputObject inputObject, OutputObject outputObject);
+
+    void insertMachinToPickRequest(InputObject inputObject, OutputObject outputObject);
+
+    void insertMachinToPickPatch(InputObject inputObject, OutputObject outputObject);
+
+    void queryMachinTransReturnById(InputObject inputObject, OutputObject outputObject);
+
+    void insertMachinToPickReturn(InputObject inputObject, OutputObject outputObject);
+
+    /**
+     * 查询存在待接收/待执行车间任务的加工单列表（供APS排程下拉框使用，不分页）
+     *
+     * @param inputObject  入参
+     * @param outputObject 出参，返回 rows 和 total
+     */
+    void queryMachinListForApsSchedule(InputObject inputObject, OutputObject outputObject);
+
+    /**
+     * 加工单自动安排车间任务：根据加工单的工序信息，自动为每个工序分配可执行车间并创建车间任务
+     *
+     * @param inputObject  入参，需包含 id（加工单id）
+     * @param outputObject 出参
+     */
+    void autoAssignFarmTasks(InputObject inputObject, OutputObject outputObject);
+
+    /**
+     * 加工单自动安排车间任务（内部实现，供审批通过等场景调用）
+     *
+     * @param machinId              加工单id
+     * @param quantityType          数量类型，见 {@link com.skyeye.machin.classenum.AutoAssignQuantityTypeEnum}
+     * @param priorityFarmIds       优先车间id列表，按顺序优先
+     * @param farmSelectStrategy    车间选取策略，见 {@link com.skyeye.machin.classenum.AutoAssignFarmSelectStrategyEnum}
+     * @param maxFarmsPerProcedure 每个工序最多分配给多少个车间，默认1
+     */
+    void doAutoAssignFarmTasks(String machinId, String quantityType, List<String> priorityFarmIds, String farmSelectStrategy, int maxFarmsPerProcedure);
+
+    /**
+     * 判断指定工序是否是指定加工单子单据的最后一条工序
+     *
+     * @param machin         加工单
+     * @param childId        加工单子单据id
+     * @param bomChildId     bom子件清单的id
+     * @param wayProcedureId 工艺路线id
+     * @param materialId     物料id
+     * @param normsId        规格id
+     * @param procedureId    工序id
+     * @return true：是最后一条子单据，false：不是最后一条子单据
+     */
+    boolean checkIsLastProcedure(Machin machin, String childId, String bomChildId, String wayProcedureId, String materialId,
+                                 String normsId, String procedureId);
+}

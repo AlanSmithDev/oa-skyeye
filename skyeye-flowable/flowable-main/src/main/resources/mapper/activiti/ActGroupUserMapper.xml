@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="com.skyeye.eve.dao.ActGroupUserDao">
+
+    <select id="queryUserInfoOnActGroup" resultType="java.util.Map">
+        SELECT
+            a.id dataId,
+            b.user_id id,
+            b.user_name userName,
+            b.company_id companyId,
+            b.department_id departmentId,
+            b.job_id jobId,
+            b.email,
+            b.job_number jobNumber
+        FROM
+            act_group_user a,
+            sys_eve_user_staff b
+            <if test="tenantId != '' and tenantId != null">
+            ,tenant_user k
+            </if>
+        <where>
+            a.user_id = b.user_id
+            <if test="objectId != '' and objectId != null">
+                AND a.group_id = #{objectId}
+            </if>
+            <if test="keyword != '' and keyword != null">
+                AND b.user_name LIKE '%${keyword}%'
+            </if>
+            <if test="tenantId != '' and tenantId != null">
+                AND a.tenant_id = #{tenantId}
+                AND k.tenant_id = #{tenantId}
+                AND k.staff_id = b.id
+            </if>
+        </where>
+        group by b.id
+    </select>
+
+</mapper>

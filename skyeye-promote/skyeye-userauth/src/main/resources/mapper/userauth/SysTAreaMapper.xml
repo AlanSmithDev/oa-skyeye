@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="UTF-8" ?>  
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="com.skyeye.eve.dao.SysTAreaDao">
+	
+	<select id="querySysTAreaList" resultType="java.util.Map">
+		SELECT
+			a.code_id id,
+			IFNULL(a.parent_code_id, '0') pId,
+			a.`name`,
+			false lay_is_open,
+			a.level,
+			a.code_id codeId
+		FROM
+			t_area a
+		<where>
+			3 > a.level
+			<if test="sqlExtract != '' and sqlExtract != null">
+				${sqlExtract}
+			</if>
+			<if test="keyword != null and keyword != ''">
+				AND a.`name` LIKE '%${keyword}%'
+			</if>
+		</where>
+	</select>
+	
+	<select id="queryAreaListByParentCode" resultType="java.util.Map">
+		SELECT
+			a.id,
+			a.`name`
+		FROM
+			t_area a
+		WHERE a.parent_code_id = #{parentCode}
+	</select>
+
+	<select id="queryTAreaPhoneList" resultType="java.util.Map">
+		SELECT
+			a.id,
+			a.code_id codeId,
+			a.`name`,
+			a.parent_code_id parentCodeId
+		FROM
+			t_area a
+		WHERE 4 > a.`level`
+		ORDER BY a.`level` ASC
+	</select>
+	
+</mapper>

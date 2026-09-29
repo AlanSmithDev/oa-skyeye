@@ -1,0 +1,282 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="com.skyeye.dao.ErpPageDao">
+
+	<select id="queryThisMonthErpOrder" resultType="String">
+		SELECT
+			IFNULL(SUM(a.total_price), 0) money
+		FROM
+			erp_depothead a
+		<where>
+			date_format(a.create_time, '%Y-%m') = date_format(now(), '%Y-%m')
+			<foreach collection="states" item="state" separator="," open=" AND a.state in(" close=")">
+				#{state}
+			</foreach>
+			<if test="tenantId != '' and tenantId != null">
+				AND a.tenant_id = #{tenantId}
+			</if>
+			AND a.id_key = #{idKey}
+		</where>
+	</select>
+
+	<select id="querySixMonthOrderMoneyList" resultType="java.util.Map">
+		SELECT
+			a.`year_month` yearMonth,
+			SUM(b.total_price) money
+		FROM
+			(SELECT DATE_FORMAT(CURDATE(), '%Y-%m') AS `year_month`
+			UNION SELECT DATE_FORMAT((CURDATE() - INTERVAL 1 MONTH), '%Y-%m') AS `year_month`
+			UNION SELECT DATE_FORMAT((CURDATE() - INTERVAL 2 MONTH), '%Y-%m') AS `year_month`
+			UNION SELECT DATE_FORMAT((CURDATE() - INTERVAL 3 MONTH), '%Y-%m') AS `year_month`
+			UNION SELECT DATE_FORMAT((CURDATE() - INTERVAL 4 MONTH), '%Y-%m') AS `year_month`
+			UNION SELECT DATE_FORMAT((CURDATE() - INTERVAL 5 MONTH), '%Y-%m') AS `year_month`) a
+			LEFT JOIN erp_depothead b ON date_format(b.create_time, '%Y-%m') = a.`year_month`
+				<foreach collection="states" item="state" separator="," open=" AND b.state in(" close=")">
+					#{state}
+				</foreach>
+				AND b.id_key = #{idKey}
+				<if test="tenantId != '' and tenantId != null">
+					AND b.tenant_id = #{tenantId}
+				</if>
+		GROUP BY a.`year_month`
+	</select>
+
+	<select id="queryTwelveMonthProfitMoneyList" resultType="java.util.Map">
+		SELECT
+			a.`year_month` yearMonth,
+			SUM(b.total_price *
+				(CASE b.id_key WHEN 'com.skyeye.purchase.service.impl.PurchaseOrderServiceImpl' THEN -1 ELSE 1 END)) profitMoney
+		FROM
+			(SELECT DATE_FORMAT(CURDATE(), '%Y-%m') AS `year_month`
+			UNION SELECT DATE_FORMAT((CURDATE() - INTERVAL 1 MONTH), '%Y-%m') AS `year_month`
+			UNION SELECT DATE_FORMAT((CURDATE() - INTERVAL 2 MONTH), '%Y-%m') AS `year_month`
+			UNION SELECT DATE_FORMAT((CURDATE() - INTERVAL 3 MONTH), '%Y-%m') AS `year_month`
+			UNION SELECT DATE_FORMAT((CURDATE() - INTERVAL 4 MONTH), '%Y-%m') AS `year_month`
+			UNION SELECT DATE_FORMAT((CURDATE() - INTERVAL 5 MONTH), '%Y-%m') AS `year_month`
+			UNION SELECT DATE_FORMAT((CURDATE() - INTERVAL 6 MONTH), '%Y-%m') AS `year_month`
+			UNION SELECT DATE_FORMAT((CURDATE() - INTERVAL 7 MONTH), '%Y-%m') AS `year_month`
+			UNION SELECT DATE_FORMAT((CURDATE() - INTERVAL 8 MONTH), '%Y-%m') AS `year_month`
+			UNION SELECT DATE_FORMAT((CURDATE() - INTERVAL 9 MONTH), '%Y-%m') AS `year_month`
+			UNION SELECT DATE_FORMAT((CURDATE() - INTERVAL 10 MONTH), '%Y-%m') AS `year_month`
+			UNION SELECT DATE_FORMAT((CURDATE() - INTERVAL 11 MONTH), '%Y-%m') AS `year_month`) a
+			LEFT JOIN erp_depothead b ON date_format(b.create_time, '%Y-%m') = a.`year_month`
+                <foreach collection="states" item="state" separator="," open=" AND b.state in(" close=")">
+                    #{state}
+                </foreach>
+                <foreach collection="idKeys" item="idKey" separator="," open=" AND b.id_key in(" close=")">
+                    #{idKey}
+                </foreach>
+				<if test="tenantId != '' and tenantId != null">
+					AND b.tenant_id = #{tenantId}
+				</if>
+		GROUP BY a.`year_month`
+	</select>
+
+	<!--
+		ERP 业务流程节点数量：key 为节点 code。
+		除 E01/E03 外均为对应单据类型的总笔数（当前租户）。
+		E01：待出库单据笔数；E03：待入库单据笔数。
+	-->
+	<select id="queryProcessFlowCount" resultType="java.util.Map">
+		SELECT 'A01' AS code, COUNT(1) AS cnt FROM erp_purchase_request a
+		<where>
+			<include refid="processFlowTenant"/>
+		</where>
+		UNION ALL
+		SELECT 'A02' AS code, COUNT(1) AS cnt FROM erp_depothead a
+		<where>
+			a.id_key = #{params.purchaseOrderIdKey}
+			<include refid="processFlowTenant"/>
+		</where>
+		UNION ALL
+		SELECT 'A03' AS code, COUNT(1) AS cnt FROM erp_depothead a
+		<where>
+			a.id_key = #{params.purchaseDeliveryIdKey}
+			<include refid="processFlowTenant"/>
+		</where>
+		UNION ALL
+		SELECT 'A04' AS code, COUNT(1) AS cnt FROM erp_quality_inspection a
+		<where>
+			<include refid="processFlowTenant"/>
+		</where>
+		UNION ALL
+		SELECT 'A05' AS code, COUNT(1) AS cnt FROM erp_depothead a
+		<where>
+			a.id_key = #{params.purchasePutIdKey}
+			<include refid="processFlowTenant"/>
+		</where>
+		UNION ALL
+		SELECT 'A06' AS code, COUNT(1) AS cnt FROM erp_depothead a
+		<where>
+			a.id_key = #{params.purchaseReturnsIdKey}
+			<include refid="processFlowTenant"/>
+		</where>
+		UNION ALL
+		SELECT 'A07' AS code, COUNT(1) AS cnt FROM erp_depothead a
+		<where>
+			a.id_key = #{params.purchaseExchangesIdKey}
+			<include refid="processFlowTenant"/>
+		</where>
+		UNION ALL
+		SELECT 'B01' AS code, COUNT(1) AS cnt FROM erp_depothead a
+		<where>
+			a.id_key = #{params.salesOrderIdKey}
+			<include refid="processFlowTenant"/>
+		</where>
+		UNION ALL
+		SELECT 'B02' AS code, COUNT(1) AS cnt FROM erp_depothead a
+		<where>
+			a.id_key = #{params.salesOutLetIdKey}
+			<include refid="processFlowTenant"/>
+		</where>
+		UNION ALL
+		SELECT 'B03' AS code, COUNT(1) AS cnt FROM erp_depothead a
+		<where>
+			a.id_key = #{params.salesReturnsIdKey}
+			<include refid="processFlowTenant"/>
+		</where>
+		UNION ALL
+		SELECT 'B04' AS code, COUNT(1) AS cnt FROM erp_depothead a
+		<where>
+			a.id_key = #{params.salesExchangesIdKey}
+			<include refid="processFlowTenant"/>
+		</where>
+		UNION ALL
+		SELECT 'C01' AS code, COUNT(1) AS cnt FROM erp_depothead a
+		<where>
+			a.id_key = #{params.retailOutLetIdKey}
+			<include refid="processFlowTenant"/>
+		</where>
+		UNION ALL
+		SELECT 'C02' AS code, COUNT(1) AS cnt FROM erp_depothead a
+		<where>
+			a.id_key = #{params.retailReturnsIdKey}
+			<include refid="processFlowTenant"/>
+		</where>
+		UNION ALL
+		SELECT 'D01' AS code, COUNT(1) AS cnt FROM erp_product_lead a
+		<where>
+			<include refid="processFlowTenant"/>
+		</where>
+		UNION ALL
+		SELECT 'D02' AS code, COUNT(1) AS cnt FROM erp_depothead a
+		<where>
+			a.id_key = #{params.productLeadOutStockIdKey}
+			<include refid="processFlowTenant"/>
+		</where>
+		UNION ALL
+		SELECT 'D03' AS code, COUNT(1) AS cnt FROM erp_product_return a
+		<where>
+			<include refid="processFlowTenant"/>
+		</where>
+		UNION ALL
+		SELECT 'D04' AS code, COUNT(1) AS cnt FROM erp_depothead a
+		<where>
+			a.id_key = #{params.productReturnInStockIdKey}
+			<include refid="processFlowTenant"/>
+		</where>
+		UNION ALL
+		SELECT 'E01' AS code, COUNT(1) AS cnt FROM erp_depothead a
+		<where>
+			<foreach collection="params.outFromIdKeys" item="idKey" open="a.id_key IN (" separator="," close=")">
+				#{idKey}
+			</foreach>
+			<foreach collection="params.waitOutOtherStates" item="st" open="AND a.other_state IN (" separator="," close=")">
+				#{st}
+			</foreach>
+			<foreach collection="params.waitDocStates" item="st" open="AND a.state IN (" separator="," close=")">
+				#{st}
+			</foreach>
+			<include refid="processFlowTenant"/>
+		</where>
+		UNION ALL
+		SELECT 'E02' AS code, COUNT(1) AS cnt FROM erp_depothead a
+		<where>
+			a.id_key = #{params.depotOutIdKey}
+			<include refid="processFlowTenant"/>
+		</where>
+		UNION ALL
+		SELECT 'E03' AS code, COUNT(1) AS cnt FROM erp_depothead a
+		<where>
+			<foreach collection="params.putFromIdKeys" item="idKey" open="a.id_key IN (" separator="," close=")">
+				#{idKey}
+			</foreach>
+			<foreach collection="params.waitPutOtherStates" item="st" open="AND a.other_state IN (" separator="," close=")">
+				#{st}
+			</foreach>
+			<foreach collection="params.waitDocStates" item="st" open="AND a.state IN (" separator="," close=")">
+				#{st}
+			</foreach>
+			<include refid="processFlowTenant"/>
+		</where>
+		UNION ALL
+		SELECT 'E04' AS code, COUNT(1) AS cnt FROM erp_depothead a
+		<where>
+			a.id_key = #{params.depotPutIdKey}
+			<include refid="processFlowTenant"/>
+		</where>
+		UNION ALL
+		SELECT 'G01' AS code, COUNT(1) AS cnt FROM erp_production_plan_head a
+		<where>
+			<include refid="processFlowTenant"/>
+		</where>
+		UNION ALL
+		SELECT 'G02' AS code, COUNT(1) AS cnt FROM erp_production_head a
+		<where>
+			<include refid="processFlowTenant"/>
+		</where>
+		UNION ALL
+		SELECT 'G03' AS code, COUNT(1) AS cnt FROM erp_machin_header a
+		<where>
+			<include refid="processFlowTenant"/>
+		</where>
+		UNION ALL
+		SELECT 'G04' AS code, COUNT(1) AS cnt FROM erp_machin_procedure_farm a
+		<where>
+			<include refid="processFlowTenant"/>
+		</where>
+		UNION ALL
+		SELECT 'I01' AS code, COUNT(1) AS cnt FROM erp_pick_header a
+		<where>
+			a.id_key = #{params.requisitionMaterialIdKey}
+			<include refid="processFlowTenant"/>
+		</where>
+		UNION ALL
+		SELECT 'I02' AS code, COUNT(1) AS cnt FROM erp_depothead a
+		<where>
+			a.id_key = #{params.requisitionOutLetIdKey}
+			<include refid="processFlowTenant"/>
+		</where>
+		UNION ALL
+		SELECT 'I03' AS code, COUNT(1) AS cnt FROM erp_pick_header a
+		<where>
+			a.id_key = #{params.patchMaterialIdKey}
+			<include refid="processFlowTenant"/>
+		</where>
+		UNION ALL
+		SELECT 'I04' AS code, COUNT(1) AS cnt FROM erp_depothead a
+		<where>
+			a.id_key = #{params.patchOutLetIdKey}
+			<include refid="processFlowTenant"/>
+		</where>
+		UNION ALL
+		SELECT 'I05' AS code, COUNT(1) AS cnt FROM erp_pick_header a
+		<where>
+			a.id_key = #{params.returnMaterialIdKey}
+			<include refid="processFlowTenant"/>
+		</where>
+		UNION ALL
+		SELECT 'I06' AS code, COUNT(1) AS cnt FROM erp_depothead a
+		<where>
+			a.id_key = #{params.returnPutIdKey}
+			<include refid="processFlowTenant"/>
+		</where>
+	</select>
+
+	<sql id="processFlowTenant">
+		<if test="params.tenantId != '' and params.tenantId != null">
+			AND a.tenant_id = #{params.tenantId}
+		</if>
+	</sql>
+
+</mapper>

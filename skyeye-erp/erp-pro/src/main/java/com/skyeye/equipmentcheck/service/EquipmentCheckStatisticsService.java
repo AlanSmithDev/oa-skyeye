@@ -1,0 +1,39 @@
+/*******************************************************************************
+ * Copyright 卫志强 QQ：598748873@qq.com Inc. All rights reserved. 开源地址：https://gitee.com/doc_wei01/skyeye
+ ******************************************************************************/
+
+package com.skyeye.equipmentcheck.service;
+
+import com.skyeye.common.object.InputObject;
+import com.skyeye.common.object.OutputObject;
+
+/**
+ * @ClassName: EquipmentCheckStatisticsService
+ * @Description: 设备点检统计服务接口层
+ */
+public interface EquipmentCheckStatisticsService {
+
+    void queryTodayCheckedTotal(InputObject inputObject, OutputObject outputObject);
+
+    void queryTodayAbnormalCheckTotal(InputObject inputObject, OutputObject outputObject);
+
+    void queryCheckStatsByCheckTime(InputObject inputObject, OutputObject outputObject);
+
+    void queryAbnormalCheckStatsByCheckTime(InputObject inputObject, OutputObject outputObject);
+
+    /**
+     * 点检单按审批状态统计：草稿、审核中、审核通过、驳回、作废、撤销
+     */
+    void queryCheckOrderStateStats(InputObject inputObject, OutputObject outputObject);
+
+    /**
+     * 点检转维修统计：异常单中已转维修 / 未转维修（饼图 name/value）
+     */
+    void queryCheckOrderToRepairRateStats(InputObject inputObject, OutputObject outputObject);
+
+    /**
+     * 点检单按点检结果统计：正常 / 异常；未填结果不入统计
+     */
+    void queryCheckOrderStatsByCheckResult(InputObject inputObject, OutputObject outputObject);
+
+}

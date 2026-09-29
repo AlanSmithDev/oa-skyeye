@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="com.skyeye.organization.dao.CompanyJobScoreDao">
+
+    <select id="queryCompanyJobScoreList" resultType="java.util.Map">
+        SELECT
+            a.id,
+            a.`name`,
+            a.enabled,
+            a.create_id createId,
+            CONVERT(a.create_time, char) createTime,
+            a.last_update_id lastUpdateId,
+            CONVERT(a.last_update_time, char) lastUpdateTime
+        FROM
+            company_job_score a
+        <where>
+            AND a.job_id = #{jobId}
+            <if test="sqlExtract != '' and sqlExtract != null">
+                ${sqlExtract}
+            </if>
+            <if test="keyword != null and keyword != ''">
+                AND a.`name` LIKE '%${keyword}%'
+            </if>
+            <if test="tenantId != null and tenantId != ''">
+                AND a.tenant_id = #{tenantId}
+            </if>
+        </where>
+    </select>
+
+    <select id="queryEnableCompanyJobScoreList" resultType="java.util.Map">
+        SELECT
+            a.id,
+            a.`name` title,
+            '0' parentId,
+            true isLast,
+            '[{"type": "0", "isChecked": "0"}]' checkArr,
+            '1' level
+        FROM
+            company_job_score a
+        WHERE a.enabled = #{enabled}
+        AND a.job_id = #{jobId}
+        <if test="tenantId != null and tenantId != ''">
+            AND a.tenant_id = #{tenantId}
+        </if>
+    </select>
+
+</mapper>

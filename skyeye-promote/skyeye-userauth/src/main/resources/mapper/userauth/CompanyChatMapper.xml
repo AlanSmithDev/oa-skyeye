@@ -1,0 +1,93 @@
+<?xml version="1.0" encoding="UTF-8" ?>  
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="com.skyeye.eve.dao.CompanyChatDao">
+	
+	<select id="queryUserMineByUserId" parameterType="java.util.Map" resultType="java.util.Map">
+		SELECT
+			b.user_name username,
+			a.id,
+			'online' status,
+			b.user_photo avatar,
+			b.company_id companyId,
+			b.department_id departmentId,
+			b.user_sign sign
+		FROM
+			sys_eve_user a,
+			sys_eve_user_staff b
+		WHERE a.id = b.user_id
+		AND a.id = #{userId}
+	</select>
+	
+	<select id="queryUserGroupByUserId" parameterType="java.util.Map" resultType="java.util.Map">
+		SELECT
+			b.id,
+			b.group_name groupname,
+			b.group_img avatar,
+			b.create_id createId
+		FROM
+			sys_talk_group_user a,
+			sys_talk_group b
+		WHERE
+			a.group_id = b.id
+		AND a.user_id = #{userId}
+		AND b.state = '1'
+		<if test="tenantId != '' and tenantId != null">
+			AND a.tenant_id = #{tenantId} AND b.tenant_id = #{tenantId}
+		</if>
+	</select>
+
+	<select id="queryDepartmentUserByDepartId" parameterType="java.util.Map" resultType="java.util.Map">
+		SELECT
+			a.user_name username,
+			a.id staffId,
+			b.id,
+			'offline' status,
+			a.user_photo avatar,
+			IFNULL(a.user_sign, '暂无签名') sign,
+			a.company_id companyId,
+			a.department_id departmentId,
+			a.job_id jobId
+		FROM
+			sys_eve_user_staff a,
+			sys_eve_user b
+			<if test="tenantId != '' and tenantId != null">
+            ,tenant_user k
+            </if>
+		WHERE a.user_id = b.id
+		<choose>
+            <when test="tenantId != null and tenantId != ''">
+                 <if test="departIds != null and departIds.size() &gt; 0">
+					<foreach collection="departIds" item="departId" separator="," open=" AND k.department_id in(" close=")">
+						#{departId}
+					</foreach>
+				</if>
+				AND a.id = k.staff_id
+            	AND k.tenant_id = #{tenantId}
+            	AND k.state != '2'
+            </when>
+            <otherwise>
+                <if test="departIds != null and departIds.size() &gt; 0">
+					<foreach collection="departIds" item="departId" separator="," open=" AND a.department_id in(" close=")">
+						#{departId}
+					</foreach>
+				</if>
+				AND a.state != '2'
+            </otherwise>
+        </choose>
+		<if test="notInUserIds != null and notInUserIds.size() &gt; 0">
+			<foreach collection="notInUserIds" item="notInUserId" separator="," open=" AND a.id not in(" close=")">
+				#{notInUserId}
+			</foreach>
+		</if>
+		ORDER BY convert(a.user_name using gbk) ASC
+	</select>
+	
+	<update id="editUserSignByUserId" parameterType="java.util.Map">
+		UPDATE sys_eve_user_staff
+		<set>
+			user_sign = #{userSign},
+		</set>
+		WHERE user_id = #{userId}
+	</update>
+	
+</mapper>

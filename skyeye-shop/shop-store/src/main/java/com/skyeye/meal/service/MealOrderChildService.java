@@ -1,0 +1,70 @@
+/*******************************************************************************
+ * Copyright 卫志强 QQ：598748873@qq.com Inc. All rights reserved. 开源地址：https://gitee.com/doc_wei01/skyeye
+ ******************************************************************************/
+
+package com.skyeye.meal.service;
+
+import com.skyeye.base.business.service.SkyeyeBusinessService;
+import com.skyeye.common.object.InputObject;
+import com.skyeye.common.object.OutputObject;
+import com.skyeye.meal.entity.MealOrderChild;
+
+import java.util.List;
+
+/**
+ * @ClassName: MealOrderChildService
+ * @Description: 套餐订单所选套餐服务接口层
+ * @author: skyeye云系列--卫志强
+ * @date: 2024/7/25 9:51
+ * @Copyright: 2024 https://gitee.com/doc_wei01/skyeye Inc. All rights reserved.
+ * 注意：本内容仅限购买后使用.禁止私自外泄以及用于其他的商业目的
+ */
+public interface MealOrderChildService extends SkyeyeBusinessService<MealOrderChild> {
+
+    String calculationTotalPrice(String objectId, String objectKey, List<MealOrderChild> mealOrderChildList);
+
+    void deleteByOrderId(String orderId);
+
+    List<MealOrderChild> selectByOrderId(String orderId);
+
+    void saveList(String orderId, List<MealOrderChild> mealOrderChildList);
+
+    void queryMealMationByObjectId(InputObject inputObject, OutputObject outputObject);
+
+    void updateStateISUseByOrderId(String orderId);
+
+    void updateStateISNotUseById(String id);
+
+    /**
+     * 退款成功后，设置为“已退款，不可再用”
+     */
+    void updateStateRefundById(String id);
+
+    /**
+     * 批量将按年限计算且已过期的套餐子订单置为已用完
+     */
+    void expireYearLimitMealOrders();
+
+    /**
+     * 核销使用套餐（按次数：累计使用次数并在用完时自动置为已用完；按年限：仅做有效性校验）
+     *
+     * @param id     套餐子订单id
+     * @param useNum 本次使用次数，默认 1
+     */
+    void consumeMealOrderChild(String id, Integer useNum);
+
+    /**
+     * 下单/预约阶段校验套餐是否可用（不扣减次数）
+     *
+     * @param id         套餐子订单id
+     * @param objectId   会员id（可空）
+     * @param materialId 商品id（可空）
+     * @param normsId    规格id（可空）
+     * @param codeNum    条码（可空）
+     * @param useNum     计划使用次数，默认 1
+     */
+    void checkMealOrderChildCanConsume(String id, String objectId, String materialId, String normsId, String codeNum, Integer useNum);
+
+    void queryMealMationByMaterial(InputObject inputObject, OutputObject outputObject);
+
+}

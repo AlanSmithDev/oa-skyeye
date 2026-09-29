@@ -1,0 +1,111 @@
+/*******************************************************************************
+ * Copyright 卫志强 QQ：598748873@qq.com Inc. All rights reserved. 开源地址：https://gitee.com/doc_wei01/skyeye
+ ******************************************************************************/
+
+package com.skyeye.shopmaterial.service;
+
+import com.skyeye.base.business.service.SkyeyeBusinessService;
+import com.skyeye.common.entity.search.CommonPageInfo;
+import com.skyeye.common.object.InputObject;
+import com.skyeye.common.object.OutputObject;
+import com.skyeye.shopmaterial.entity.ShopMaterialStore;
+
+import java.util.List;
+import java.util.Map;
+
+/**
+ * @ClassName: ShopMaterialStoreService
+ * @Description: 商城商品上线的门店服务接口层
+ * @author: skyeye云系列--卫志强
+ * @date: 2024/9/18 14:10
+ * @Copyright: 2024 https://gitee.com/doc_wei01/skyeye Inc. All rights reserved.
+ * 注意：本内容仅限购买后使用.禁止私自外泄以及用于其他的商业目的
+ */
+public interface ShopMaterialStoreService extends SkyeyeBusinessService<ShopMaterialStore> {
+
+    void deleteByMaterialId(String materialId);
+
+    List<ShopMaterialStore> selectByMaterialId(String materialId);
+
+    Map<String, List<ShopMaterialStore>> selectByMaterialId(List<String> materialId);
+
+    List<ShopMaterialStore> selectByStoreId(String storeId, Integer isLaunchStore, Integer isLunchShop, String keyword);
+
+    /**
+     * 添加指定商品到所有门店
+     *
+     * @param materialId 商品ID
+     * @param bigTypeId
+     */
+    void addAllStoreForMaterial(String materialId, Integer storeCoverage, List<String> storeIds, String bigTypeId);
+
+    void saveShopMaterialStore(InputObject inputObject, OutputObject outputObject);
+
+    List<ShopMaterialStore> queryShopMaterialList(InputObject inputObject, OutputObject outputObject);
+
+    /**
+     * 批量门店 + 优惠券：查询已上架适用商品（门店商品关系），不含商品详情组装
+     */
+    List<ShopMaterialStore> queryCouponApplicableMaterialStoreList(String couponId, List<String> storeIdList);
+
+    Map<String, ShopMaterialStore> queryShopMaterialStoreByMaterialIds(String... materialIds);
+
+    void queryShopMaterialById(InputObject inputObject, OutputObject outputObject);
+
+    void queryShopMaterialByMaterialIdAndStoreId(InputObject inputObject, OutputObject outputObject);
+
+    Map<String, List<ShopMaterialStore>> queryShopMaterialListByStoreIds(List<String> storeIds, CommonPageInfo commonPageInfo);
+
+    void queryShopMaterialByIds(InputObject inputObject, OutputObject outputObject);
+
+    /**
+     * 按门店批量预览已上架商城商品（关注店铺等场景，每店限条）
+     */
+    void queryShopMaterialPreviewByStoreIds(InputObject inputObject, OutputObject outputObject);
+
+    void queryShopMaterialMapByMaterialIdAndStoreId(InputObject inputObject, OutputObject outputObject);
+
+    /**
+     * 按商品id列表 + 门店id列表（IN，非一一对应）批量获取商城商品-门店关系id
+     */
+    void queryShopMaterialMapByMaterialIdsAndStoreIds(InputObject inputObject, OutputObject outputObject);
+
+    void deleteShopMaterialStoreByStoreIds(InputObject inputObject, OutputObject outputObject);
+
+    void addShopMaterialStore(InputObject inputObject, OutputObject outputObject);
+
+    void deleteShopMaterialStore(InputObject inputObject, OutputObject outputObject);
+
+    void launchShopMaterialStore(InputObject inputObject, OutputObject outputObject);
+
+    void unlaunchShopMaterialStore(InputObject inputObject, OutputObject outputObject);
+
+    void getAllowedShopMaterialList(InputObject inputObject, OutputObject outputObject);
+
+    void getAddedShopMaterialList(InputObject inputObject, OutputObject outputObject);
+
+    void getLaunchedShopMaterialList(InputObject inputObject, OutputObject outputObject);
+
+    /**
+     * 按商品查询已上架到商城的门店列表（商品上架商城-已上架门店 Tab）
+     */
+    void queryLaunchedStoreByMaterialId(InputObject inputObject, OutputObject outputObject);
+
+    void queryPersonalStoreMaterialList(InputObject inputObject, OutputObject outputObject);
+
+    void queryPlatformMaterialForPersonalStore(InputObject inputObject, OutputObject outputObject);
+
+    void choosePlatformMaterialForPersonalStore(InputObject inputObject, OutputObject outputObject);
+
+    void launchPersonalStoreMaterial(InputObject inputObject, OutputObject outputObject);
+
+    void unlaunchPersonalStoreMaterial(InputObject inputObject, OutputObject outputObject);
+
+    void removePersonalStoreMaterial(InputObject inputObject, OutputObject outputObject);
+
+    void createPersonalStoreMaterial(InputObject inputObject, OutputObject outputObject);
+
+    void queryPersonalStoreMaterialDetail(InputObject inputObject, OutputObject outputObject);
+
+    void updatePersonalStoreMaterial(InputObject inputObject, OutputObject outputObject);
+}

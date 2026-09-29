@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="com.skyeye.eve.articles.dao.ArticlesUseDao">
+
+    <select id="queryMyArticlesList" resultType="java.util.Map">
+        SELECT
+            e.id,
+            a.`name`,
+            a.articles_num articlesNum,
+            a.type_id typeId,
+            a.specifications,
+            d.title title,
+            d.odd_number oddNumber,
+            CONVERT(d.create_time, char) createTime,
+            e.apply_use_num applyUseNum
+        FROM
+            asset_articles a,
+            asset_articles_use d,
+            asset_articles_use_goods e
+        <where>
+            d.create_id = #{createId}
+            AND d.id = e.parent_id
+            AND e.article_id = a.id
+            <if test="sqlExtract != '' and sqlExtract != null">
+                ${sqlExtract}
+            </if>
+            <if test="keyword != null and keyword != ''">
+                AND (a.`name` like '%${keyword}%' OR d.odd_number like '%${keyword}%' OR a.articles_num like '%${keyword}%')
+            </if>
+            <if test="tenantId != '' and tenantId != null">
+                AND a.tenant_id = #{tenantId} AND d.tenant_id = #{tenantId} AND e.tenant_id = #{tenantId}
+            </if>
+        </where>
+        ORDER BY d.create_time DESC
+    </select>
+
+</mapper>

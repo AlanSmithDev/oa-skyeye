@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<controller>
+
+	<!-- 我的工作管理开始 -->
+	<url id="myschooltask002" path="/post/MySchoolTaskController/queryMyWaitMarkingList" val="获取我的待阅卷列表" allUse="1">
+		<property id="limit" name="limit" ref="required,num" var="分页参数,每页多少条数据" />
+		<property id="page" name="page" ref="required,num" var="分页参数,第几页"/>
+		<property id="schoolId" name="schoolId" ref="" var="学校id"/>
+		<property id="gradeId" name="gradeId" ref="" var="年级id"/>
+		<property id="year" name="year" ref="" var="年份"/>
+		<property id="surveyName" name="surveyName" ref="" var="试卷名称"/>
+		<property id="studentName" name="studentName" ref="" var="学生姓名"/>
+		<property id="studentNo" name="studentNo" ref="" var="学号"/>
+	</url>
+	<url id="myschooltask003" path="/post/MySchoolTaskController/queryMyEndMarkingList" val="获取我的已阅卷列表" allUse="1">
+		<property id="limit" name="limit" ref="required,num" var="分页参数,每页多少条数据" />
+		<property id="page" name="page" ref="required,num" var="分页参数,第几页"/>
+		<property id="schoolId" name="schoolId" ref="" var="学校id"/>
+		<property id="gradeId" name="gradeId" ref="" var="年级id"/>
+		<property id="year" name="year" ref="" var="年份"/>
+		<property id="surveyName" name="surveyName" ref="" var="试卷名称"/>
+		<property id="studentName" name="studentName" ref="" var="学生姓名"/>
+		<property id="studentNo" name="studentNo" ref="" var="学号"/>
+	</url>
+	<!-- 我的工作管理开始 -->
+	
+</controller>

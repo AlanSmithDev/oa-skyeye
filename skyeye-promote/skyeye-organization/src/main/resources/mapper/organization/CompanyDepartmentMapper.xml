@@ -1,0 +1,129 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="com.skyeye.organization.dao.CompanyDepartmentDao">
+
+	<select id="queryCompanyDepartmentList" parameterType="java.util.Map" resultType="java.util.Map">
+		SELECT
+			a.id,
+			a.`name`,
+			a.remark,
+			a.company_id companyId,
+			<choose>
+				<when test="tenantId != null and tenantId != ''">
+					(SELECT COUNT(1) FROM tenant_user b WHERE b.department_id = a.id) userNum,
+				</when>
+				<otherwise>
+					(SELECT COUNT(1) FROM sys_eve_user_staff b WHERE b.department_id = a.id) userNum,
+				</otherwise>
+			</choose>
+			(SELECT COUNT(1) FROM company_job c WHERE c.department_id = a.id) jobNum,
+			a.overtime_settlement_type overtimeSettlementType,
+			a.create_id createId,
+			CONVERT(a.create_time, char) createTime,
+			a.last_update_id lastUpdateId,
+			CONVERT(a.last_update_time, char) lastUpdateTime
+		FROM
+			company_department a
+		<where>
+			<if test="sqlExtract != '' and sqlExtract != null">
+				${sqlExtract}
+			</if>
+			<if test="keyword != null and keyword != ''">
+				AND a.`name` LIKE '%${keyword}%'
+			</if>
+			<if test="tenantId != null and tenantId != ''">
+				AND a.tenant_id = #{tenantId}
+			</if>
+		</where>
+		ORDER BY a.create_time DESC
+	</select>
+
+	<select id="queryCompanyDepartmentUserMationById" resultType="java.util.Map">
+		SELECT
+			COUNT(1) childsNum
+		FROM
+			<choose>
+				<when test="tenantId != null and tenantId != ''">
+					tenant_user b
+				</when>
+				<otherwise>
+					sys_eve_user_staff b
+				</otherwise>
+			</choose>
+		WHERE b.department_id = #{id}
+	</select>
+
+	<select id="queryCompanyJobNumMationById" resultType="java.util.Map">
+		SELECT
+			COUNT(1) companyJobNum
+		FROM
+			company_job b
+		WHERE b.department_id = #{id}
+		<if test="tenantId != null and tenantId != ''">
+			AND b.tenant_id = #{tenantId}
+		</if>
+	</select>
+
+	<select id="queryCompanyDepartmentListTreeByCompanyId" parameterType="java.util.Map" resultType="java.util.Map">
+		SELECT
+			a.id,
+			a.`name` title,
+			a.parent_id parentId,
+			CASE a.parent_id WHEN '0' THEN true ELSE true END isLast,
+			'[{"type": "0", "isChecked": "0"}]' checkArr,
+			CASE a.parent_id WHEN '0' THEN '1' ELSE '2' END level
+		FROM
+			company_department a
+		WHERE a.company_id = #{companyId}
+		<if test="tenantId != null and tenantId != ''">
+			AND a.tenant_id = #{tenantId}
+		</if>
+		ORDER BY a.parent_id ASC
+	</select>
+
+	<select id="queryCompanyDepartmentOrganization" parameterType="java.util.Map" resultType="java.util.Map">
+		SELECT
+			a.id,
+			a.`name`,
+			'部门' title,
+			a.parent_id parentId,
+			a.company_id companyId
+		FROM
+			company_department a
+		<where>
+			<if test="tenantId != null and tenantId != ''">
+				AND a.tenant_id = #{tenantId}
+			</if>
+		</where>
+	</select>
+
+	<select id="queryDepartmentList" resultType="java.util.Map">
+		SELECT
+			a.id,
+			a.`name`,
+			a.company_id pId,
+			'isDepartment' folderType,
+			1 isParent,
+			'' `email`
+		FROM
+			company_department a
+		<where>
+			<if test="companyIds != null and companyIds.size() &gt; 0">
+				a.company_id IN
+				<foreach collection="companyIds" item="companyId" index="index" open="(" close=")" separator=",">
+					#{companyId}
+				</foreach>
+			</if>
+			<if test="departmentIds != null and departmentIds.size() &gt; 0">
+				AND a.id IN
+				<foreach collection="departmentIds" item="departmentId" index="index" open="(" close=")" separator=",">
+					#{departmentId}
+				</foreach>
+			</if>
+			<if test="tenantId != null and tenantId != ''">
+				AND a.tenant_id = #{tenantId}
+			</if>
+		</where>
+	</select>
+
+</mapper>

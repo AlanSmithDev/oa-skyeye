@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<controller modelName="工作流模块">
+
+	<!--
+		- allUse  是否需要登录才能使用   1是   0否  2需要登陆才能访问，但无需授权    默认为否
+	 -->
+
+	<!-- 工作流流程相关操作开始 -->
+	<url id="activitimode026" path="/post/ActivitiProcessController/editProcessInstanceWithDraw" val="流程撤回" allUse="2" groupName="工作流流程相关操作">
+		<property id="processInstanceId" name="processInstanceId" ref="required" var="流程id"/>
+		<property id="hisTaskId" name="hisTaskId" ref="required" var="历史审批任务id"/>
+		<property id="opinion" name="opinion" ref="required" var="撤回原因"/>
+	</url>
+	<!-- 工作流流程相关操作结束 -->
+
+	<!-- 工作流用户任务相关操作开始 -->
+	<url id="activitimode005" path="/post/ActivitiTaskController/editActivitiModelToRun" val="提交审批结果" allUse="2" groupName="工作流用户任务操作">
+		<property id="processInstanceId" name="processInstanceId" ref="required" var="流程id"/>
+		<property id="taskId" name="taskId" ref="required" var="任务id"/>
+		<property id="opinion" name="opinion" ref="" var="审核意见"/>
+		<property id="flag" name="flag" ref="required,num" var="是否通过：1.通过2.不通过"/>
+		<property id="approverId" name="approverId" ref="" var="下个节点的审批人"/>
+	</url>
+	<!-- 工作流用户任务相关操作结束 -->
+</controller>

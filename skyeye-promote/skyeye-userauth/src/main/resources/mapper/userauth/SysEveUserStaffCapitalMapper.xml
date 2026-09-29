@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="com.skyeye.eve.dao.SysEveUserStaffCapitalDao">
+    <select id="queryStaffCapitalMation" resultType="java.util.Map">
+        SELECT
+            a.id,
+            a.money
+        FROM
+            sys_eve_user_staff_capital a
+        WHERE a.staff_id = #{staffId}
+        AND a.month_time = #{monthTime}
+        <if test="tenantId != '' and tenantId != null">
+            AND a.tenant_id = #{tenantId}
+        </if>
+    </select>
+
+    <insert id="insertStaffCapitalMation">
+        INSERT into sys_eve_user_staff_capital
+        (id, staff_id, company_id, department_id, month_time, money, type, state, create_time, tenant_id)
+        VALUES
+        (#{id}, #{staffId}, #{companyId}, #{departmentId}, #{monthTime}, #{money}, #{type}, #{state}, #{createTime}, #{tenantId})
+    </insert>
+
+    <update id="editStaffCapitalMoneyMation">
+        UPDATE sys_eve_user_staff_capital
+        <set>
+            money = #{money}
+        </set>
+        WHERE id = #{id}
+        <if test="tenantId != '' and tenantId != null">
+            AND tenant_id = #{tenantId}
+        </if>
+    </update>
+
+    <select id="queryStaffCapitalWaitPayMonthList" resultType="java.util.Map">
+        SELECT
+            a.company_id companyId,
+            a.department_id departmentId,
+            a.month_time monthTime,
+            FORMAT(SUM(a.money), 2) monthAllMony
+        FROM
+            sys_eve_user_staff_capital a
+        WHERE a.type = 1
+        <if test="monthTime != '' and monthTime != null">
+            AND a.month_time = #{monthTime}
+        </if>
+        <if test="tenantId != '' and tenantId != null">
+            AND a.tenant_id = #{tenantId}
+        </if>
+        GROUP BY a.month_time, a.department_id
+        ORDER BY a.month_time ASC
+    </select>
+
+</mapper>
